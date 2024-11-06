@@ -507,7 +507,7 @@ _cairo_dwrite_font_face_destroy (void *font_face)
 {
     cairo_dwrite_font_face_t *dwrite_font_face = static_cast<cairo_dwrite_font_face_t*>(font_face);
     if (dwrite_font_face->dwriteface)
-	dwrite_font_face->dwriteface->Release();
+        dwrite_font_face->dwriteface->Release();
     if (dwrite_font_face->rendering_params)
 	dwrite_font_face->rendering_params->Release();
     return TRUE;
@@ -532,10 +532,8 @@ _cairo_dwrite_glyph_run_from_glyphs(cairo_glyph_t *glyphs,
     FLOAT *advances = const_cast<FLOAT*>(run->glyphAdvances);
     DWRITE_GLYPH_OFFSET *offsets = const_cast<DWRITE_GLYPH_OFFSET*>(run->glyphOffsets);
 
-    cairo_dwrite_font_face_t *dwriteff = reinterpret_cast<cairo_dwrite_font_face_t*>(scaled_font->base.font_face);
-
     run->bidiLevel = 0;
-    run->fontFace = dwriteff->dwriteface;
+    run->fontFace = scaled_font->dwriteface;
     run->glyphCount = num_glyphs;
     run->isSideways = FALSE;
 
@@ -656,6 +654,9 @@ _cairo_dwrite_font_face_scaled_font_create (void			*abstract_face,
 	return status;
     }
 
+    dwrite_font->dwriteface->AddRef ();
+    dwrite_font->dwriteface = dwrite_font->dwriteface;
+
     dwrite_font->mat = dwrite_font->base.ctm;
     cairo_matrix_multiply(&dwrite_font->mat, &dwrite_font->mat, font_matrix);
     dwrite_font->mat_inverse = dwrite_font->mat;
@@ -667,9 +668,9 @@ _cairo_dwrite_font_face_scaled_font_create (void			*abstract_face,
     if (dwrite_font->measuring_mode == DWRITE_MEASURING_MODE_GDI_CLASSIC ||
 	dwrite_font->measuring_mode == DWRITE_MEASURING_MODE_GDI_NATURAL) {
 	DWRITE_MATRIX transform = _cairo_dwrite_matrix_from_matrix (&dwrite_font->mat);
-	font_face->dwriteface->GetGdiCompatibleMetrics(1, 1, &transform, &metrics);
+        dwrite_font->dwriteface->GetGdiCompatibleMetrics(1, 1, &transform, &metrics);
     } else {
-	font_face->dwriteface->GetMetrics(&metrics);
+        dwrite_font->dwriteface->GetMetrics(&metrics);
     }
 
     extents.ascent = (FLOAT)metrics.ascent / metrics.designUnitsPerEm;
@@ -698,7 +699,7 @@ _cairo_dwrite_font_face_scaled_font_create (void			*abstract_face,
     }
 
     if (default_quality == CAIRO_ANTIALIAS_GRAY) {
-	if (!do_grayscale(font_face->dwriteface, (unsigned int)_cairo_round(font_matrix->yy))) {
+        if (!do_grayscale(dwrite_font->dwriteface, (unsigned int)_cairo_round(font_matrix->yy))) {
 	    default_quality = CAIRO_ANTIALIAS_NONE;
 	}
     }
@@ -720,6 +721,9 @@ static void
 _cairo_dwrite_scaled_font_fini(void *scaled_font)
 {
     cairo_dwrite_scaled_font_t *dwrite_font = static_cast<cairo_dwrite_scaled_font_t*>(scaled_font);
+
+    dwrite_font->dwriteface->Release ();
+
     if (dwrite_font->rendering_params)
 	dwrite_font->rendering_params->Release();
 }
@@ -765,10 +769,9 @@ _cairo_dwrite_ucs4_to_index(void			     *scaled_font,
 			    uint32_t		      ucs4)
 {
     cairo_dwrite_scaled_font_t *dwritesf = static_cast<cairo_dwrite_scaled_font_t*>(scaled_font);
-    cairo_dwrite_font_face_t *face = reinterpret_cast<cairo_dwrite_font_face_t*>(dwritesf->base.font_face);
+    UINT16 index = 0;
 
-    UINT16 index;
-    face->dwriteface->GetGlyphIndicesA(&ucs4, 1, &index);
+    dwritesf->dwriteface->GetGlyphIndicesA(&ucs4, 1, &index);
     return index;
 }
 
@@ -787,12 +790,12 @@ _cairo_dwrite_scaled_font_init_glyph_metrics(cairo_dwrite_scaled_font_t *scaled_
     if (font_face->measuring_mode == DWRITE_MEASURING_MODE_GDI_CLASSIC ||
 	font_face->measuring_mode == DWRITE_MEASURING_MODE_GDI_NATURAL) {
 	DWRITE_MATRIX transform = _cairo_dwrite_matrix_from_matrix (&scaled_font->mat);
-	font_face->dwriteface->GetGdiCompatibleMetrics(1, 1, &transform, &fontMetrics);
+        scaled_font->dwriteface->GetGdiCompatibleMetrics(1, 1, &transform, &fontMetrics);
 	BOOL natural = font_face->measuring_mode == DWRITE_MEASURING_MODE_GDI_NATURAL;
-	hr = font_face->dwriteface->GetGdiCompatibleGlyphMetrics (1, 1, &transform, natural, &charIndex, 1, &metrics, FALSE);
+        hr = scaled_font->dwriteface->GetGdiCompatibleGlyphMetrics (1, 1, &transform, natural, &charIndex, 1, &metrics, FALSE);
     } else {
-	font_face->dwriteface->GetMetrics(&fontMetrics);
-	hr = font_face->dwriteface->GetDesignGlyphMetrics(&charIndex, 1, &metrics);
+	scaled_font->dwriteface->GetMetrics(&fontMetrics);
+        hr = scaled_font->dwriteface->GetDesignGlyphMetrics(&charIndex, 1, &metrics);
     }
     if (FAILED(hr)) {
 	return CAIRO_INT_STATUS_UNSUPPORTED;
@@ -968,16 +971,15 @@ _cairo_dwrite_scaled_font_init_glyph_path(cairo_dwrite_scaled_font_t *scaled_fon
     offset.ascenderOffset = 0;
     UINT16 glyphId = (UINT16)_cairo_scaled_glyph_index(scaled_glyph);
     FLOAT advance = 0.0;
-    cairo_dwrite_font_face_t *dwriteff = (cairo_dwrite_font_face_t*)scaled_font->base.font_face;
 
-    HRESULT hr = dwriteff->dwriteface->GetGlyphRunOutline(1,
-							  &glyphId,
-							  &advance,
-							  &offset,
-							  1,
-							  FALSE,
-							  FALSE,
-							  &recorder);
+    HRESULT hr = scaled_font->dwriteface->GetGlyphRunOutline(1,
+                                                             &glyphId,
+                                                             &advance,
+                                                             &offset,
+                                                             1,
+                                                             FALSE,
+                                                             FALSE,
+                                                             &recorder);
     if (!SUCCEEDED(hr))
 	return _cairo_dwrite_error (hr, "GetGlyphRunOutline failed");
 
@@ -1035,7 +1037,7 @@ _cairo_dwrite_scaled_font_init_glyph_color_surface(cairo_dwrite_scaled_font_t *s
     /* Y-axis is inverted */
     offset.ascenderOffset = -(FLOAT)y;
 
-    run.fontFace = dwrite_font_face->dwriteface;
+    run.fontFace = scaled_font->dwriteface;
     run.fontEmSize = 1;
     run.glyphCount = 1;
     run.glyphIndices = &index;
@@ -1057,7 +1059,7 @@ _cairo_dwrite_scaled_font_init_glyph_color_surface(cairo_dwrite_scaled_font_t *s
 
     RefPtr<IDWriteFontFace2> fontFace2;
     UINT32 palette_count = 0;
-    if (SUCCEEDED(dwrite_font_face->dwriteface->QueryInterface(&fontFace2)))
+    if (SUCCEEDED(scaled_font->dwriteface->QueryInterface(&fontFace2)))
 	palette_count = fontFace2->GetColorPaletteCount();
 
     UINT32 palette_index = CAIRO_COLOR_PALETTE_DEFAULT;
@@ -1283,7 +1285,7 @@ _cairo_dwrite_scaled_font_init_glyph_surface(cairo_dwrite_scaled_font_t *scaled_
 
     run.glyphCount = 1;
     run.glyphAdvances = &advance;
-    run.fontFace = ((cairo_dwrite_font_face_t*)scaled_font->base.font_face)->dwriteface;
+    run.fontFace = scaled_font->dwriteface;
     run.fontEmSize = 1.0f;
     run.bidiLevel = 0;
     run.glyphIndices = &index;
@@ -1323,18 +1325,17 @@ _cairo_dwrite_load_truetype_table(void                 *scaled_font,
 				  unsigned long        *length)
 {
     cairo_dwrite_scaled_font_t *dwritesf = static_cast<cairo_dwrite_scaled_font_t*>(scaled_font);
-    cairo_dwrite_font_face_t *face = reinterpret_cast<cairo_dwrite_font_face_t*>(dwritesf->base.font_face);
 
     const void *data;
     UINT32 size;
     void *tableContext;
     BOOL exists;
     HRESULT hr;
-    hr = face->dwriteface->TryGetFontTable (be32_to_cpu (tag),
-					    &data,
-					    &size,
-					    &tableContext,
-					    &exists);
+    hr = dwritesf->dwriteface->TryGetFontTable (be32_to_cpu (tag),
+                                                &data,
+                                                &size,
+                                                &tableContext,
+                                                &exists);
     if (FAILED(hr))
 	return _cairo_dwrite_error (hr, "TryGetFontTable failed");
 
@@ -1349,7 +1350,7 @@ _cairo_dwrite_load_truetype_table(void                 *scaled_font,
     *length = size;
 
     if (tableContext) {
-	face->dwriteface->ReleaseFontTable(tableContext);
+        dwritesf->dwriteface->ReleaseFontTable(tableContext);
     }
     return (cairo_int_status_t)CAIRO_STATUS_SUCCESS;
 }
@@ -1359,17 +1360,16 @@ _cairo_dwrite_is_synthetic(void                      *scaled_font,
 			   cairo_bool_t              *is_synthetic)
 {
     cairo_dwrite_scaled_font_t *dwritesf = static_cast<cairo_dwrite_scaled_font_t*>(scaled_font);
-    cairo_dwrite_font_face_t *face = reinterpret_cast<cairo_dwrite_font_face_t*>(dwritesf->base.font_face);
     HRESULT hr;
     cairo_int_status_t status;
 
-    if (face->dwriteface->GetSimulations() != DWRITE_FONT_SIMULATIONS_NONE) {
+    if (dwritesf->dwriteface->GetSimulations() != DWRITE_FONT_SIMULATIONS_NONE) {
 	*is_synthetic = FALSE;
 	return CAIRO_INT_STATUS_SUCCESS;
     }
 
     RefPtr<IDWriteFontFace5> fontFace5;
-    if (FAILED(face->dwriteface->QueryInterface(&fontFace5))) {
+    if (FAILED(dwritesf->dwriteface->QueryInterface(&fontFace5))) {
 	/* If IDWriteFontFace5 is not available, assume this version of
 	 * DirectWrite does not support variations.
 	 */
@@ -1722,7 +1722,6 @@ _cairo_dwrite_show_glyphs_on_surface(void			*surface,
 {
     // TODO: Check font & surface for types.
     cairo_dwrite_scaled_font_t *dwritesf = reinterpret_cast<cairo_dwrite_scaled_font_t*>(scaled_font);
-    cairo_dwrite_font_face_t *dwriteff = reinterpret_cast<cairo_dwrite_font_face_t*>(scaled_font->font_face);
     cairo_win32_surface_t *dst = reinterpret_cast<cairo_win32_surface_t*>(surface);
     cairo_int_status_t status;
     /* We can only handle dwrite fonts */
@@ -1827,10 +1826,10 @@ compare_font_tables (cairo_dwrite_font_face_t *dwface,
     HRESULT hr;
 
     hr = dwface->dwriteface->TryGetFontTable(be32_to_cpu (tag),
-					     &dw_data,
-					     &dw_size,
-					     &dw_tableContext,
-					     &dw_exists);
+                                             &dw_data,
+                                             &dw_size,
+                                             &dw_tableContext,
+                                             &dw_exists);
     if (FAILED(hr))
 	return _cairo_dwrite_error (hr, "TryGetFontTable failed");
 
@@ -1866,7 +1865,7 @@ compare_font_tables (cairo_dwrite_font_face_t *dwface,
 cleanup:
     free (buffer);
     if (dw_tableContext)
-	dwface->dwriteface->ReleaseFontTable(dw_tableContext);
+        dwface->dwriteface->ReleaseFontTable(dw_tableContext);
 
     return status;
 }
@@ -1930,6 +1929,8 @@ _cairo_dwrite_scaled_font_create_win32_scaled_font (cairo_scaled_font_t *scaled_
     if (!gdiInterop) {
         return CAIRO_INT_STATUS_UNSUPPORTED;
     }
+
+    /* TODO: use scaled font? */
 
     LOGFONTW logfont;
     if (FAILED(gdiInterop->ConvertFontFaceToLOGFONT (dwface->dwriteface, &logfont))) {
