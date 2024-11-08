@@ -626,6 +626,54 @@ do_grayscale(IDWriteFontFace *dwface, unsigned int ppem)
     return true;
 }
 
+static void
+set_dwrite_axes_from_string (const char             *string,
+                             DWRITE_FONT_AXIS_VALUE *dwrite_axes,
+                             UINT32                  count)
+{
+    const char *p = string;
+
+    while (p && *p) {
+        const char *start;
+        const char *end, *end2;
+        DWRITE_FONT_AXIS_TAG tag;
+        double value;
+
+        while (_cairo_isspace (*p)) p++;
+
+        start = p;
+        end = strchr (p, ',');
+        if (end && (end - p < 6))
+            goto skip;
+
+        tag = DWRITE_MAKE_FONT_AXIS_TAG (p[0], p[1], p[2], p[3]);
+
+        p += 4;
+        while (_cairo_isspace (*p)) p++;
+        if (*p == '=') p++;
+
+        if (p - start < 5)
+            goto skip;
+
+        value = _cairo_strtod (p, (char **) &end2);
+
+        while (end2 && _cairo_isspace (*end2)) end2++;
+
+        if (end2 && (*end2 != ',' && *end2 != '\0'))
+            goto skip;
+
+        for (UINT32 i = 0; i < count; i++) {
+            if (dwrite_axes[i].axisTag == tag) {
+                dwrite_axes[i].value = value;
+                break;
+            }
+        }
+
+skip:
+        p = end ? end + 1 : NULL;
+    }
+}
+
 static cairo_status_t
 _cairo_dwrite_font_face_scaled_font_create (void			*abstract_face,
 					    const cairo_matrix_t	*font_matrix,
@@ -654,8 +702,59 @@ _cairo_dwrite_font_face_scaled_font_create (void			*abstract_face,
 	return status;
     }
 
-    dwrite_font->dwriteface->AddRef ();
-    dwrite_font->dwriteface = dwrite_font->dwriteface;
+    if (options->variations) {
+        RefPtr<IDWriteFontFace5> dwriteface5;
+
+        /* Since Windows 10 20348 */
+        if (SUCCEEDED (font_face->dwriteface->QueryInterface(&dwriteface5))) {
+            RefPtr<IDWriteFontResource> dwritefontresource;
+
+            if (dwriteface5->HasVariations () &&
+                SUCCEEDED (dwriteface5->GetFontResource (&dwritefontresource)))
+            {
+                UINT32 count = MIN (dwriteface5->GetFontAxisValueCount (), 500);
+                DWRITE_FONT_AXIS_VALUE *dwrite_axes = new DWRITE_FONT_AXIS_VALUE[count];
+                UINT32 variables_count = 0;
+
+                /* Sort variable axes first */
+                for (UINT32 i = 0; i < count; i++) {
+                    if (dwritefontresource->GetFontAxisAttributes (i) & DWRITE_FONT_AXIS_ATTRIBUTES_VARIABLE) {
+                       if (variables_count != i) {
+                           DWRITE_FONT_AXIS_VALUE swap_aux = dwrite_axes[variables_count];
+                           dwrite_axes[variables_count] = dwrite_axes[i];
+                           dwrite_axes[i] = swap_aux;
+                       }
+
+                       variables_count++;
+                    }
+                }
+
+                if (SUCCEEDED (dwriteface5->GetFontAxisValues(dwrite_axes, count))) {
+                    RefPtr<IDWriteFontFace5> dwriteface_new5;
+
+                    set_dwrite_axes_from_string (options->variations, dwrite_axes, variables_count);
+
+                    /* Can't use constexpr with mingw-w64 headers */
+                    const DWRITE_FONT_SIMULATIONS all_simulations = DWRITE_FONT_SIMULATIONS_BOLD |
+                                                                    DWRITE_FONT_SIMULATIONS_OBLIQUE;
+                    if (SUCCEEDED (dwritefontresource->CreateFontFace(all_simulations,
+                                                                      dwrite_axes,
+                                                                      count,
+                                                                      &dwriteface_new5)))
+                    {
+                        dwrite_font->dwriteface = dwriteface_new5.forget().drop();
+                    }
+                }
+
+                delete[] dwrite_axes;
+            }
+        }
+    }
+
+    if (!dwrite_font->dwriteface) {
+        font_face->dwriteface->AddRef ();
+        dwrite_font->dwriteface = font_face->dwriteface;
+    }
 
     dwrite_font->mat = dwrite_font->base.ctm;
     cairo_matrix_multiply(&dwrite_font->mat, &dwrite_font->mat, font_matrix);
