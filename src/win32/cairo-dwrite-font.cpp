@@ -47,6 +47,7 @@
 #include "cairo-scaled-font-subsets-private.h"
 #include "cairo-dwrite.h"
 
+#include <utility>
 #include <float.h>
 
 #include <wincodec.h>
@@ -225,21 +226,6 @@ RefPtr<IDWriteRenderingParams> DWriteFactory::mDefaultRenderingParams;
 
 RefPtr<ID2D1Factory> D2DFactory::mFactoryInstance;
 RefPtr<ID2D1DCRenderTarget> D2DFactory::mRenderTarget;
-
-static int
-_quality_from_antialias_mode(cairo_antialias_t antialias)
-{
-    switch (antialias) {
-    case CAIRO_ANTIALIAS_NONE:
-	return NONANTIALIASED_QUALITY;
-    case CAIRO_ANTIALIAS_FAST:
-    case CAIRO_ANTIALIAS_GRAY:
-	return ANTIALIASED_QUALITY;
-    default:
-	break;
-    }
-    return CLEARTYPE_QUALITY;    
-}
 
 static RefPtr<IDWriteRenderingParams>
 _create_rendering_params(IDWriteRenderingParams     *params,
@@ -1334,60 +1320,41 @@ _cairo_dwrite_scaled_font_init_glyph_color_surface(cairo_dwrite_scaled_font_t *s
 }
 
 static cairo_int_status_t
-_cairo_dwrite_scaled_font_init_glyph_surface(cairo_dwrite_scaled_font_t *scaled_font,
-					     cairo_scaled_glyph_t	*scaled_glyph)
+_cairo_dwrite_scaled_font_init_glyph_surface (cairo_dwrite_scaled_font_t *scaled_font,
+                                              cairo_scaled_glyph_t       *scaled_glyph)
 {
-    cairo_int_status_t status;
-    cairo_win32_surface_t *surface;
-    cairo_t *cr;
-    cairo_surface_t *image;
-    int width, height;
-    double x1, y1, x2, y2;
+    HRESULT hr;
 
-    x1 = _cairo_fixed_integer_floor (scaled_glyph->bbox.p1.x);
-    y1 = _cairo_fixed_integer_floor (scaled_glyph->bbox.p1.y);
-    x2 = _cairo_fixed_integer_ceil (scaled_glyph->bbox.p2.x);
-    y2 = _cairo_fixed_integer_ceil (scaled_glyph->bbox.p2.y);
-    width = (int)(x2 - x1);
-    height = (int)(y2 - y1);
+    double x1 = _cairo_fixed_integer_floor (scaled_glyph->bbox.p1.x);
+    double y1 = _cairo_fixed_integer_floor (scaled_glyph->bbox.p1.y);
+    double x2 = _cairo_fixed_integer_ceil (scaled_glyph->bbox.p2.x);
+    double y2 = _cairo_fixed_integer_ceil (scaled_glyph->bbox.p2.y);
+    int width = (int)(x2 - x1);
+    int height = (int)(y2 - y1);
 
-    DWRITE_GLYPH_RUN run;
+    if (width <= 0)
+        width = 1;
+    if (height <= 0)
+        height = 1;
+
     FLOAT advance = 0;
     UINT16 index = (UINT16)_cairo_scaled_glyph_index (scaled_glyph);
     DWRITE_GLYPH_OFFSET offset;
     double x = -x1 + .25 * _cairo_scaled_glyph_xphase (scaled_glyph);
     double y = -y1 + .25 * _cairo_scaled_glyph_yphase (scaled_glyph);
-    RECT area;
-    DWRITE_MATRIX matrix;
 
-    surface = (cairo_win32_surface_t *)
-	cairo_win32_surface_create_with_dib (CAIRO_FORMAT_RGB24, width, height);
-
-    cr = cairo_create (&surface->base);
-    cairo_set_source_rgb (cr, 1, 1, 1);
-    cairo_paint (cr);
-    status = (cairo_int_status_t)cairo_status (cr);
-    cairo_destroy(cr);
-    if (status)
-	goto FAIL;
-
-    /*
-     * We transform by the inverse transformation here. This will put our glyph
+    /* We transform by the inverse transformation here. This will put our glyph
      * locations in the space in which we draw. Which is later transformed by
      * the transformation matrix that we use. This will transform the
      * glyph positions back to where they were before when drawing, but the
-     * glyph shapes will be transformed by the transformation matrix.
-     */
+     * glyph shapes will be transformed by the transformation matrix. */
     cairo_matrix_transform_point(&scaled_font->mat_inverse, &x, &y);
     offset.advanceOffset = (FLOAT)x;
-    /* Y-axis is inverted */
-    offset.ascenderOffset = -(FLOAT)y;
+    offset.ascenderOffset = -(FLOAT)y; /* Y axis is inverted */
 
-    area.top = 0;
-    area.bottom = height;
-    area.left = 0;
-    area.right = width;
+    DWRITE_MATRIX matrix = _cairo_dwrite_matrix_from_matrix(&scaled_font->mat);
 
+    DWRITE_GLYPH_RUN run;
     run.glyphCount = 1;
     run.glyphAdvances = &advance;
     run.fontFace = scaled_font->dwriteface;
@@ -1397,29 +1364,370 @@ _cairo_dwrite_scaled_font_init_glyph_surface(cairo_dwrite_scaled_font_t *scaled_
     run.isSideways = FALSE;
     run.glyphOffsets = &offset;
 
-    matrix = _cairo_dwrite_matrix_from_matrix(&scaled_font->mat);
+    // Reduce the many Cairo antialias values to the
+    // three we actually care about: NONE, GRAY, RGB
+    enum {
+        ANTIALIAS_NONE,
+        ANTIALIAS_GRAY,
+        ANTIALIAS_CLEARTYPE,
+    } antialias = ANTIALIAS_CLEARTYPE;
 
-    status = _dwrite_draw_glyphs_to_gdi_surface_gdi (surface, &matrix, &run,
-            RGB(0,0,0), scaled_font, area);
-    if (status)
-	goto FAIL;
+    switch (scaled_font->antialias_mode) {
+        case CAIRO_ANTIALIAS_NONE:
+            antialias = ANTIALIAS_NONE;
+            break;
+        case CAIRO_ANTIALIAS_FAST:
+        case CAIRO_ANTIALIAS_GRAY:
+            antialias = ANTIALIAS_GRAY;
+            break;
+        case CAIRO_ANTIALIAS_DEFAULT:
+        case CAIRO_ANTIALIAS_GOOD:
+        case CAIRO_ANTIALIAS_BEST:
+        case CAIRO_ANTIALIAS_SUBPIXEL:
+            antialias = ANTIALIAS_CLEARTYPE;
+            break;
+    }
 
-    GdiFlush();
+    // Set DWrite rendering options
 
-    image = _cairo_compute_glyph_mask (&surface->base, _quality_from_antialias_mode(scaled_font->antialias_mode));
-    status = (cairo_int_status_t)image->status;
-    if (status)
-	goto FAIL;
+    DWRITE_RENDERING_MODE rendering_mode;
+    DWRITE_RENDERING_MODE1 rendering_mode1;
+    DWRITE_TEXT_ANTIALIAS_MODE text_antialias_mode;
+    DWRITE_TEXTURE_TYPE texture_type;
 
-    cairo_surface_set_device_offset (image, -x1, -y1);
+    switch (antialias) {
+        case ANTIALIAS_NONE:
+            rendering_mode1 = DWRITE_RENDERING_MODE1_ALIASED;
+            rendering_mode = DWRITE_RENDERING_MODE_ALIASED;
+            text_antialias_mode = DWRITE_TEXT_ANTIALIAS_MODE_GRAYSCALE;
+            texture_type = DWRITE_TEXTURE_ALIASED_1x1;
+            break;
+        case ANTIALIAS_GRAY:
+            rendering_mode1 = DWRITE_RENDERING_MODE1_NATURAL_SYMMETRIC;
+            rendering_mode = DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC;
+            text_antialias_mode = DWRITE_TEXT_ANTIALIAS_MODE_GRAYSCALE;
+            texture_type = DWRITE_TEXTURE_ALIASED_1x1;
+            break;
+        case ANTIALIAS_CLEARTYPE:
+            rendering_mode1 = DWRITE_RENDERING_MODE1_NATURAL_SYMMETRIC;
+            rendering_mode = DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC;
+            text_antialias_mode = DWRITE_TEXT_ANTIALIAS_MODE_CLEARTYPE;
+            texture_type = DWRITE_TEXTURE_CLEARTYPE_3x1;
+            break;
+    }
+
+    DWRITE_GRID_FIT_MODE grid_fit_mode = DWRITE_GRID_FIT_MODE_DEFAULT;
+
+    switch (cairo_font_options_get_hint_style (&scaled_font->base.options)) {
+        case CAIRO_HINT_STYLE_DEFAULT:
+            grid_fit_mode = DWRITE_GRID_FIT_MODE_DEFAULT;
+        case CAIRO_HINT_STYLE_NONE:
+            grid_fit_mode = DWRITE_GRID_FIT_MODE_DISABLED;
+        case CAIRO_HINT_STYLE_SLIGHT:
+        case CAIRO_HINT_STYLE_MEDIUM:
+        case CAIRO_HINT_STYLE_FULL:
+            grid_fit_mode = DWRITE_GRID_FIT_MODE_ENABLED;
+    }
+
+    cairo_subpixel_order_t subpixel_order;
+    subpixel_order = cairo_font_options_get_subpixel_order (&scaled_font->base.options);
+
+    bool subpixel_order_is_vertical = false;
+    if (antialias == ANTIALIAS_CLEARTYPE) {
+        switch (subpixel_order) {
+            case CAIRO_SUBPIXEL_ORDER_DEFAULT:
+            case CAIRO_SUBPIXEL_ORDER_RGB:
+            case CAIRO_SUBPIXEL_ORDER_BGR:
+                break;
+            case CAIRO_SUBPIXEL_ORDER_VRGB:
+            case CAIRO_SUBPIXEL_ORDER_VBGR:
+                subpixel_order_is_vertical = true;
+                break;
+        }
+    }
+
+    if (subpixel_order_is_vertical) {
+        // DirectWrite does not support vertical pixel geometries.
+        // As a workaround, apply a simmetry which swaps x and y
+        // coordinates, then re-swap while copying the back into
+        // the image surface
+
+        // swap the two rows
+        std::swap (matrix.m11, matrix.m21);
+        std::swap (matrix.m12, matrix.m22);
+    }
+
+    RefPtr<IDWriteGlyphRunAnalysis> dwrite_glyph_run_analysis;
+    if (DWriteFactory::Instance3()) {
+        hr = DWriteFactory::Instance3()->CreateGlyphRunAnalysis(&run,
+                                                                &matrix,
+                                                                rendering_mode1,
+                                                                scaled_font->measuring_mode,
+                                                                grid_fit_mode,
+                                                                text_antialias_mode,
+                                                                0, // baselineOriginX,
+                                                                0, // baselineOriginY,
+                                                                &dwrite_glyph_run_analysis);
+    }
+    else if (DWriteFactory::Instance2()) {
+        hr = DWriteFactory::Instance2()->CreateGlyphRunAnalysis(&run,
+                                                                &matrix,
+                                                                rendering_mode,
+                                                                scaled_font->measuring_mode,
+                                                                grid_fit_mode,
+                                                                text_antialias_mode,
+                                                                0, // baselineOriginX,
+                                                                0, // baselineOriginY,
+                                                                &dwrite_glyph_run_analysis);
+    }
+    else {
+        hr = DWriteFactory::Instance()->CreateGlyphRunAnalysis(&run, 1,
+                                                               &matrix,
+                                                               rendering_mode,
+                                                               scaled_font->measuring_mode,
+                                                               0, // baselineOriginX,
+                                                               0, // baselineOriginY,
+                                                               &dwrite_glyph_run_analysis);
+    }
+    if (FAILED(hr))
+       return CAIRO_INT_STATUS_UNSUPPORTED;
+
+    cairo_format_t surface_format = antialias == ANTIALIAS_NONE ? CAIRO_FORMAT_A1 :
+                                    antialias == ANTIALIAS_GRAY ? CAIRO_FORMAT_A8 :
+                                    CAIRO_FORMAT_ARGB32;
+
+    cairo_surface_t *surface = cairo_image_surface_create (surface_format, width, height);
+    if (cairo_surface_status (surface))
+        return CAIRO_INT_STATUS_UNSUPPORTED;
+
+    // Tell pixman that it should use component alpha blending when the surface is
+    // used as a source
+    pixman_image_set_component_alpha (((cairo_image_surface_t*)surface)->pixman_image, TRUE);
+
+    // That's probably not needed right after creation
+    cairo_surface_flush (surface);
+    unsigned char *surface_data = cairo_image_surface_get_data (surface);
+    int surface_stride = cairo_image_surface_get_stride (surface);
+
+    UINT32 dwrite_data_size;
+    BYTE *dwrite_data;
+    RECT dwrite_rect = {
+        0,       // left
+        0,       // top
+        width,   // right
+        height   // bottom
+    };
+
+    if (subpixel_order_is_vertical) {
+        std::swap (dwrite_rect.right,
+                   dwrite_rect.bottom);
+    }
+
+    // Whether IDWriteGlyphRunAnalysis::CreateAlphaTexture() can render directly
+    // on the cairo image surface (because the pixel formats match) or a separate
+    // buffer is needed
+    bool render_is_direct;
+
+    switch (antialias) {
+        case ANTIALIAS_NONE:
+        {
+            dwrite_data_size = width * height; //TODO: check overflow
+
+            dwrite_data = (BYTE*) _cairo_malloc (dwrite_data_size);
+            if (!dwrite_data)
+                return CAIRO_INT_STATUS_UNSUPPORTED;
+
+            render_is_direct = false;
+            break;
+        }
+        case ANTIALIAS_GRAY:
+        {
+            // The image surface may have a stride that's bigger than width-
+            // account for that by passing stride as width to DWrite. Note:
+            // stride is a byte-size, but here pixel-size is exactly 1 byte.
+            dwrite_rect.right = cairo_image_surface_get_stride (surface);
+
+            dwrite_data_size = dwrite_rect.right * height; //TODO: check overflow
+            dwrite_data = static_cast<BYTE*>(surface_data);
+
+            render_is_direct = true;
+            break;
+        }
+        case ANTIALIAS_CLEARTYPE:
+        {
+            dwrite_data_size = 3 * width * height; //TODO: check overflow
+
+            dwrite_data = (BYTE*) _cairo_malloc (dwrite_data_size);
+            if (!dwrite_data)
+                return CAIRO_INT_STATUS_UNSUPPORTED;
+
+            render_is_direct = false;
+            break;
+        }
+    }
+
+    hr = dwrite_glyph_run_analysis->CreateAlphaTexture(texture_type, &dwrite_rect, dwrite_data, dwrite_data_size);
+    if (FAILED (hr))
+        return CAIRO_INT_STATUS_UNSUPPORTED;
+
+    // Most of the code here was copied and adapted from cairoft-font.c
+    switch (antialias) {
+        case ANTIALIAS_NONE:
+        {
+            unsigned char *src = static_cast<unsigned char*>(dwrite_data);
+            unsigned char *dst = surface_data;
+
+            for (int i = 0; i < height; i++) {
+                unsigned char *d = dst;
+
+                for (int j = 0; j < width / 8; j++) {
+                    *d = (src[0] ? (1 << 0) : 0) +
+                           (src[1] ? (1 << 1) : 0) +
+                           (src[2] ? (1 << 2) : 0) +
+                           (src[3] ? (1 << 3) : 0) +
+                           (src[4] ? (1 << 4) : 0) +
+                           (src[5] ? (1 << 5) : 0) +
+                           (src[6] ? (1 << 6) : 0) +
+                           (src[7] ? (1 << 7) : 0);
+
+                    d++;
+                    src += 8;
+                }
+
+                if (width % 8 != 0) {
+                    *d = 0;
+
+                    for (int k = 0; k < width % 8; k++) {
+                        *d += (src[k] ? (1 << k) : 0);
+                    }
+
+                    d++;
+                    src += (width % 8);
+                }
+
+                dst += surface_stride;
+            }
+            break;
+        }
+        case ANTIALIAS_GRAY:
+        {
+           // Nothing to do
+           break;
+        }
+        case ANTIALIAS_CLEARTYPE:
+        {
+            unsigned char *src = static_cast<unsigned char*>(dwrite_data);
+            unsigned char *dst = surface_data;
+
+            // The alpha channel is unused for component-alpha blending.
+            // Here we set the alpha channel anyway so that things work
+            // even in case of normal blending (but one likely gets some
+            // color fringing)
+
+            switch (subpixel_order) {
+                case CAIRO_SUBPIXEL_ORDER_DEFAULT:
+                case CAIRO_SUBPIXEL_ORDER_RGB:
+                {
+                    for (int i = 0; i < height; i++) {
+                        UINT32 *d = reinterpret_cast<UINT32*>(dst);
+
+                        for (int j = 0; j < width; j++) {
+                            // CAIRO_FORMAT_ARGB32 is BGRA on little-endian
+                            *d = (src[2] << 0) +
+                                 (src[1] << 8) +
+                                 (src[0] << 16) +
+                                 (src[1] << 24); // unused
+
+                            d++;
+                            src += 3;
+                        }
+
+                        dst += surface_stride;
+                    }
+                }
+                break;
+                case CAIRO_SUBPIXEL_ORDER_BGR:
+                {
+                    for (int i = 0; i < height; i++) {
+                        UINT32 *d = reinterpret_cast<UINT32*>(dst);
+
+                        for (int j = 0; j < width; j++) {
+                            *d = (src[0] << 0) +
+                                 (src[1] << 8) +
+                                 (src[2] << 16) +
+                                 (src[1] << 24); // unused
+
+                            d++;
+                            src += 3;
+                        }
+
+                        dst += surface_stride;
+                    }
+                }
+                break;
+                case CAIRO_SUBPIXEL_ORDER_VRGB:
+                {
+                    size_t p;
+
+                    for (int i = 0; i < height; i++) {
+                        UINT32 *d = reinterpret_cast<UINT32*>(dst);
+
+                        p = i * 3;
+                        for (int j = 0; j < width; j++) {
+                            *d = (src[p + 2] << 0) +
+                                 (src[p + 1] << 8) +
+                                 (src[p + 0] << 16) +
+                                 (src[p + 1] << 24); // unused
+
+                            d++;
+                            p += 3 * height;
+                        }
+
+                        dst += surface_stride;
+                    }
+                }
+                break;
+                case CAIRO_SUBPIXEL_ORDER_VBGR:
+                {
+                    size_t p;
+
+                    for (int i = 0; i < height; i++) {
+                        UINT32 *d = reinterpret_cast<UINT32*>(dst);
+
+                        p = i * 3;
+                        for (int j = 0; j < width; j++) {
+                            *d = (src[p + 0] << 0) +
+                                 (src[p + 1] << 8) +
+                                 (src[p + 2] << 16) +
+                                 (src[p + 1] << 24); // unused
+
+                            d++;
+                            p += 3 * height;
+                        }
+
+                        dst += surface_stride;
+                    }
+                }
+                break;
+            }
+
+            break;
+        }
+    }
+
+    // That's probably not needed. cairoft-font.c doesn't do that
+    cairo_surface_mark_dirty (surface);
+
+    if (!render_is_direct) {
+        free (dwrite_data);
+    }
+
+    cairo_surface_set_device_offset (surface, -x1, -y1);
     _cairo_scaled_glyph_set_surface (scaled_glyph,
-				     &scaled_font->base,
-				     (cairo_image_surface_t *) image);
+                                     &scaled_font->base,
+                                     (cairo_image_surface_t*)surface);
 
-  FAIL:
-    cairo_surface_destroy (&surface->base);
-
-    return status;
+    return CAIRO_INT_STATUS_SUCCESS;
 }
 
 static cairo_int_status_t
@@ -1828,6 +2136,7 @@ _cairo_dwrite_show_glyphs_on_surface(void			*surface,
     cairo_dwrite_scaled_font_t *dwritesf = reinterpret_cast<cairo_dwrite_scaled_font_t*>(scaled_font);
     cairo_win32_surface_t *dst = reinterpret_cast<cairo_win32_surface_t*>(surface);
     cairo_int_status_t status;
+
     /* We can only handle dwrite fonts */
     if (cairo_scaled_font_get_type (scaled_font) != CAIRO_FONT_TYPE_DWRITE)
 	return CAIRO_INT_STATUS_UNSUPPORTED;
