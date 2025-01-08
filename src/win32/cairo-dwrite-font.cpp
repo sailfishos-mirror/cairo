@@ -1689,7 +1689,6 @@ _dwrite_draw_glyphs_to_gdi_surface_d2d(cairo_win32_surface_t *surface,
     if (FAILED(hr))
 	return CAIRO_INT_STATUS_UNSUPPORTED;
 
-    float x = 0, y = 0;
     if (transform) {
 	rt->SetTransform(D2D1::Matrix3x2F(transform->m11,
 					  transform->m12,
@@ -1722,7 +1721,6 @@ _cairo_dwrite_show_glyphs_on_surface(void			*surface,
 {
     // TODO: Check font & surface for types.
     cairo_dwrite_scaled_font_t *dwritesf = reinterpret_cast<cairo_dwrite_scaled_font_t*>(scaled_font);
-    cairo_dwrite_font_face_t *dwriteff = reinterpret_cast<cairo_dwrite_font_face_t*>(scaled_font->font_face);
     cairo_win32_surface_t *dst = reinterpret_cast<cairo_win32_surface_t*>(surface);
     cairo_int_status_t status;
     /* We can only handle dwrite fonts */
@@ -1746,10 +1744,6 @@ _cairo_dwrite_show_glyphs_on_surface(void			*surface,
 
     AutoDWriteGlyphRun run;
     run.allocate(num_glyphs);
-
-    UINT16 *indices = const_cast<UINT16*>(run.glyphIndices);
-    FLOAT *advances = const_cast<FLOAT*>(run.glyphAdvances);
-    DWRITE_GLYPH_OFFSET *offsets = const_cast<DWRITE_GLYPH_OFFSET*>(run.glyphOffsets);
 
     BOOL transform = FALSE;
     _cairo_dwrite_glyph_run_from_glyphs(glyphs, num_glyphs, dwritesf, &run, &transform);
