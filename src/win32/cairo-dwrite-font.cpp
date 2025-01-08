@@ -846,7 +846,7 @@ public:
 	, mMatrix(matrix) {}
 
     // IUnknown interface
-    IFACEMETHOD(QueryInterface)(IID const& iid, OUT void** ppObject)
+    IFACEMETHOD (QueryInterface)(IID const& iid, OUT void** ppObject)
     {
 	if (iid != __uuidof(IDWriteGeometrySink))
 	    return E_NOINTERFACE;
@@ -866,22 +866,22 @@ public:
 	return 1;
     }
 
-    IFACEMETHODIMP_(void) SetFillMode(D2D1_FILL_MODE fillMode)
+    IFACEMETHOD_(void, SetFillMode)(D2D1_FILL_MODE fillMode)
     {
 	return;
     }
 
-    STDMETHODIMP Close()
+    IFACEMETHOD (Close)()
     {
 	return S_OK;
     }
 
-    IFACEMETHODIMP_(void) SetSegmentFlags(D2D1_PATH_SEGMENT vertexFlags)
+    IFACEMETHOD_(void, SetSegmentFlags)(D2D1_PATH_SEGMENT vertexFlags)
     {
 	return;
     }
 
-    IFACEMETHODIMP_(void) BeginFigure(
+    IFACEMETHOD_(void, BeginFigure)(
 	D2D1_POINT_2F startPoint,
 	D2D1_FIGURE_BEGIN figureBegin)
     {
@@ -896,7 +896,7 @@ public:
 	(void)status; /* squelch warning */
     }
 
-    IFACEMETHODIMP_(void) EndFigure(
+    IFACEMETHOD_(void, EndFigure)(
 	D2D1_FIGURE_END figureEnd)
     {
 	if (figureEnd == D2D1_FIGURE_END_CLOSED) {
@@ -907,7 +907,7 @@ public:
 	}
     }
 
-    IFACEMETHODIMP_(void) AddBeziers(
+    IFACEMETHOD_(void, AddBeziers)(
 	const D2D1_BEZIER_SEGMENT *beziers,
 	UINT beziersCount)
     {
@@ -932,7 +932,7 @@ public:
 	}
     }
 
-    IFACEMETHODIMP_(void) AddLines(
+    IFACEMETHOD_(void, AddLines)(
 	const D2D1_POINT_2F *points,
 	UINT pointsCount)
     {
