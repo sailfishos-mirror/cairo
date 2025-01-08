@@ -1319,6 +1319,81 @@ _cairo_dwrite_scaled_font_init_glyph_color_surface(cairo_dwrite_scaled_font_t *s
     return CAIRO_INT_STATUS_SUCCESS;
 }
 
+// Helper for OS versions up to Windows 8
+static cairo_int_status_t
+init_glyph_surface_fallback_a8 (cairo_dwrite_scaled_font_t  *scaled_font,
+                                cairo_scaled_glyph_t        *scaled_glyph,
+                                int                          width,
+                                int                          height,
+                                double                       x1,
+                                double                       y1,
+                                DWRITE_MATRIX               *matrix,
+                                DWRITE_GLYPH_RUN            *run)
+{
+    RefPtr<IWICBitmap> bitmap;
+    HRESULT hr;
+
+    hr = WICImagingFactory::Instance()->CreateBitmap ((UINT)width,
+                                                      (UINT)height,
+                                                      GUID_WICPixelFormat8bppAlpha,
+                                                      WICBitmapCacheOnLoad,
+                                                      &bitmap);
+    if (FAILED(hr))
+        return _cairo_dwrite_error (hr, "CreateBitmap failed");
+
+    D2D1_RENDER_TARGET_PROPERTIES properties = D2D1::RenderTargetProperties(
+        D2D1_RENDER_TARGET_TYPE_DEFAULT,
+        D2D1::PixelFormat(
+            DXGI_FORMAT_A8_UNORM,
+            D2D1_ALPHA_MODE_PREMULTIPLIED),
+        0,
+        0,
+        D2D1_RENDER_TARGET_USAGE_NONE,
+        D2D1_FEATURE_LEVEL_DEFAULT);
+
+    RefPtr<ID2D1RenderTarget> rt;
+    hr = D2DFactory::Instance()->CreateWicBitmapRenderTarget (bitmap, properties, &rt);
+    if (FAILED(hr))
+        return _cairo_dwrite_error (hr, "CreateWicBitmapRenderTarget failed");
+
+    RefPtr<ID2D1SolidColorBrush> brush;
+    hr = rt->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Black, 1.0), &brush);
+
+    rt->BeginDraw();
+
+    rt->SetTransform(*(D2D1_MATRIX_3X2_F*)matrix);
+
+    rt->DrawGlyphRun({0, 0}, run, brush, scaled_font->measuring_mode);
+
+    hr = rt->EndDraw();
+    if (FAILED(hr))
+        return _cairo_dwrite_error (hr, "EndDraw failed");
+
+    // TODO: rt->Flush()?
+
+    cairo_surface_t *surface = cairo_image_surface_create (CAIRO_FORMAT_A8, width, height);
+    if (cairo_surface_status (surface))
+        return CAIRO_INT_STATUS_UNSUPPORTED;
+
+    // Tell pixman that it should use component alpha blending when the surface is
+    // used as a source
+    pixman_image_set_component_alpha (((cairo_image_surface_t*)surface)->pixman_image, TRUE);
+
+    int stride = cairo_image_surface_get_stride (surface);
+    WICRect rect = { 0, 0, width, height };
+    bitmap->CopyPixels(&rect,
+                       stride,
+                       height * stride,
+                       cairo_image_surface_get_data (surface));
+    cairo_surface_mark_dirty (surface);
+    cairo_surface_set_device_offset (surface, -x1, -y1);
+    _cairo_scaled_glyph_set_surface (scaled_glyph,
+                                     &scaled_font->base,
+                                     (cairo_image_surface_t*)surface);
+
+    return CAIRO_INT_STATUS_SUCCESS;
+}
+
 static cairo_int_status_t
 _cairo_dwrite_scaled_font_init_glyph_surface (cairo_dwrite_scaled_font_t *scaled_font,
                                               cairo_scaled_glyph_t       *scaled_glyph)
@@ -1481,6 +1556,14 @@ _cairo_dwrite_scaled_font_init_glyph_surface (cairo_dwrite_scaled_font_t *scaled
                                                                 &dwrite_glyph_run_analysis);
     }
     else {
+        if (antialias == ANTIALIAS_GRAY) {
+            // IDWriteGlyphRunAnalysis supports gray-scale antialiasing only when
+            // created from IDWriteFactory2 or later. If we have IDWriteFactory
+            // only, fallback to rendering with Direct2D on A8 targets.
+            return init_glyph_surface_fallback_a8 (scaled_font, scaled_glyph,
+                                                   width, height, x1, y1, &matrix, &run);
+        }
+
         hr = DWriteFactory::Instance()->CreateGlyphRunAnalysis(&run, 1,
                                                                &matrix,
                                                                rendering_mode,
