@@ -95,6 +95,7 @@ _cairo_win32_print_gdi_error (const char *context)
     DWORD last_error = GetLastError ();
 
     if (!FormatMessageW (FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                         FORMAT_MESSAGE_IGNORE_INSERTS |
 			 FORMAT_MESSAGE_FROM_SYSTEM,
 			 NULL,
 			 last_error,

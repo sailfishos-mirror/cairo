@@ -110,6 +110,7 @@ _cairo_dwrite_error (HRESULT hr, const char *context)
     void *lpMsgBuf;
 
     if (!FormatMessageW (FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                         FORMAT_MESSAGE_IGNORE_INSERTS |
 			 FORMAT_MESSAGE_FROM_SYSTEM,
 			 NULL,
 			 hr,
