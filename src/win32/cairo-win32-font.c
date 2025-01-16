@@ -258,7 +258,7 @@ _have_cleartype_quality (void)
     version_info.dwOSVersionInfoSize = sizeof (OSVERSIONINFO);
 
     if (!GetVersionEx (&version_info)) {
-	_cairo_win32_print_gdi_error ("_have_cleartype_quality");
+        _cairo_win32_print_api_error (__FUNCTION__, "GetVersionEx");
 	return FALSE;
     }
 
@@ -274,7 +274,7 @@ cairo_win32_get_system_text_quality (void)
     UINT smoothing_type;
 
     if (!SystemParametersInfo (SPI_GETFONTSMOOTHING, 0, &font_smoothing, 0)) {
-	_cairo_win32_print_gdi_error ("_get_system_quality");
+        _cairo_win32_print_api_error (__FUNCTION__, "SystemParametersInfo");
 	return DEFAULT_QUALITY;
     }
 
@@ -282,7 +282,7 @@ cairo_win32_get_system_text_quality (void)
 	if (_have_cleartype_quality ()) {
 	    if (!SystemParametersInfo (SPI_GETFONTSMOOTHINGTYPE,
 				       0, &smoothing_type, 0)) {
-		_cairo_win32_print_gdi_error ("_get_system_quality");
+                _cairo_win32_print_api_error (__FUNCTION__, "SystemParametersInfo");
 		return DEFAULT_QUALITY;
 	    }
 

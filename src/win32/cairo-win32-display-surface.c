@@ -210,7 +210,7 @@ _create_dc_and_bitmap (cairo_win32_display_surface_t *surface,
 					&bits,
 					NULL, 0);
     if (!surface->bitmap) {
-        _cairo_win32_print_gdi_error ("_create_dc_and_bitmap:CreateDIBSection");
+        _cairo_win32_print_api_error (__FUNCTION__, "CreateDIBSection");
 	goto FAIL;
     }
 
@@ -549,7 +549,7 @@ _cairo_win32_display_surface_flush (void *abstract_surface, unsigned flags)
 			 fallback->win32.dc,
 			 surface->win32.extents.x, surface->win32.extents.y,
 			 SRCCOPY))
-                status = _cairo_win32_print_gdi_error ("_cairo_win32_display_surface_flush:BitBlt");
+                status = _cairo_win32_print_api_error (__FUNCTION__, "BitBlt");
 	} else if (damage->region) {
 	    int n = cairo_region_num_rectangles (damage->region), i;
 	    for (i = 0; i < n; i++) {
@@ -566,7 +566,7 @@ _cairo_win32_display_surface_flush (void *abstract_surface, unsigned flags)
 			     fallback->win32.dc,
 			     rect.x, rect.y,
 			     SRCCOPY)) {
-                    status = _cairo_win32_print_gdi_error ("_cairo_win32_display_surface_flush:BitBlt");
+                    status = _cairo_win32_print_api_error (__FUNCTION__, "BitBlt");
 		    break;
 		}
 	    }

@@ -44,13 +44,43 @@
  * And no other function should live here.
  */
 
-
 #include "cairoint.h"
+
+#include <windows.h>
+
+/**
+ * _cairo_win32_print_api_error:
+ * @context: context string to display along with the error
+ * @api: name of the failing api
+ *
+ * Helper function to dump out a human readable form of the
+ * current error code.
+ *
+ * Return value: A cairo status code for the error code
+ **/
+cairo_status_t
+_cairo_win32_print_api_error (const char *context, const char *api)
+{
+    const DWORD lang_id = MAKELANGID (LANG_NEUTRAL, SUBLANG_DEFAULT);
+    const DWORD flags = FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                        FORMAT_MESSAGE_IGNORE_INSERTS |
+                        FORMAT_MESSAGE_FROM_SYSTEM;
+    const DWORD last_error = GetLastError ();
+    void *lpMsgBuf = NULL;
+
+    if (!FormatMessageW (flags, NULL, last_error, lang_id, (LPWSTR) &lpMsgBuf, 0, NULL)) {
+       fprintf (stderr, "%s: %s failed with error code %lu\n", context, api, last_error);
+    }
+    else {
+       fprintf (stderr, "%s: %s failed - %S\n", context, api, (wchar_t *)lpMsgBuf);
+       LocalFree (lpMsgBuf);
+    }
+
+    return _cairo_error (CAIRO_STATUS_WIN32_GDI_ERROR);
+}
 
 #if CAIRO_MUTEX_IMPL_WIN32
 #if !CAIRO_WIN32_STATIC_BUILD
-
-#include <windows.h>
 
 /* declare to avoid "no previous prototype for 'DllMain'" warning */
 BOOL WINAPI

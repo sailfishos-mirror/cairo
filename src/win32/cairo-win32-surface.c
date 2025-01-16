@@ -79,41 +79,6 @@
  * Since: 1.0
  **/
 
-/**
- * _cairo_win32_print_gdi_error:
- * @context: context string to display along with the error
- *
- * Helper function to dump out a human readable form of the
- * current error code.
- *
- * Return value: A cairo status code for the error code
- **/
-cairo_status_t
-_cairo_win32_print_gdi_error (const char *context)
-{
-    void *lpMsgBuf;
-    DWORD last_error = GetLastError ();
-
-    if (!FormatMessageW (FORMAT_MESSAGE_ALLOCATE_BUFFER |
-                         FORMAT_MESSAGE_IGNORE_INSERTS |
-			 FORMAT_MESSAGE_FROM_SYSTEM,
-			 NULL,
-			 last_error,
-			 MAKELANGID (LANG_NEUTRAL, SUBLANG_DEFAULT),
-			 (LPWSTR) &lpMsgBuf,
-			 0, NULL)) {
-	fprintf (stderr, "%s: Unknown GDI error", context);
-    } else {
-	fprintf (stderr, "%s: %S", context, (wchar_t *)lpMsgBuf);
-
-	LocalFree (lpMsgBuf);
-    }
-
-    fflush (stderr);
-
-    return _cairo_error (CAIRO_STATUS_WIN32_GDI_ERROR);
-}
-
 cairo_bool_t
 _cairo_win32_surface_get_extents (void		          *abstract_surface,
 				  cairo_rectangle_int_t   *rectangle)

@@ -176,7 +176,7 @@ const cairo_compositor_t *
 _cairo_win32_gdi_compositor_get (void);
 
 cairo_status_t
-_cairo_win32_print_gdi_error (const char *context);
+_cairo_win32_print_api_error (const char *context, const char *api);
 
 cairo_bool_t
 _cairo_surface_is_win32 (const cairo_surface_t *surface);
