@@ -168,26 +168,10 @@ typedef struct _cairo_win32_printing_surface {
 } cairo_win32_printing_surface_t;
 #define to_win32_printing_surface(S) ((cairo_win32_printing_surface_t *)(S))
 
-typedef BOOL (WINAPI *cairo_win32_alpha_blend_func_t) (HDC hdcDest,
-						       int nXOriginDest,
-						       int nYOriginDest,
-						       int nWidthDest,
-						       int hHeightDest,
-						       HDC hdcSrc,
-						       int nXOriginSrc,
-						       int nYOriginSrc,
-						       int nWidthSrc,
-						       int nHeightSrc,
-						       BLENDFUNCTION blendFunction);
-
 typedef struct _cairo_win32_device {
     cairo_device_t base;
 
-    HMODULE msimg32_dll;
-
     const cairo_compositor_t *compositor;
-
-    cairo_win32_alpha_blend_func_t alpha_blend;
 } cairo_win32_device_t;
 #define to_win32_device(D) ((cairo_win32_device_t *)(D))
 #define to_win32_device_from_surface(S) to_win32_device(((cairo_surface_t *)(S))->device)

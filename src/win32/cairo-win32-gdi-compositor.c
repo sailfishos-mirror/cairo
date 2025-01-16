@@ -105,7 +105,6 @@ struct copy_box {
     int tx, ty;
     HDC dst, src;
     BLENDFUNCTION bf;
-    cairo_win32_alpha_blend_func_t alpha_blend;
 };
 
 static cairo_bool_t copy_box (cairo_box_t *box, void *closure)
@@ -131,9 +130,9 @@ static cairo_bool_t alpha_box (cairo_box_t *box, void *closure)
     int height = _cairo_fixed_integer_part (box->p2.y - box->p1.y);
 
     TRACE ((stderr, "%s\n", __FUNCTION__));
-    return cb->alpha_blend (cb->dst, x, y, width, height,
-			    cb->src, x + cb->tx, y + cb->ty, width, height,
-			    cb->bf);
+    return AlphaBlend (cb->dst, x, y, width, height,
+                       cb->src, x + cb->tx, y + cb->ty, width, height,
+                       cb->bf);
 }
 
 struct upload_box {
@@ -382,7 +381,6 @@ alpha_blend_boxes (cairo_win32_display_surface_t *dst,
     cb.bf.BlendFlags = 0;
     cb.bf.SourceConstantAlpha = alpha;
     cb.bf.AlphaFormat = (src->win32.format == CAIRO_FORMAT_ARGB32) ? AC_SRC_ALPHA : 0;
-    cb.alpha_blend = to_win32_device(dst->win32.base.device)->alpha_blend;
 
     cb.tx += cb.limit.x;
     cb.ty += cb.limit.y;
@@ -397,10 +395,7 @@ alpha_blend_boxes (cairo_win32_display_surface_t *dst,
 static cairo_bool_t
 can_alpha_blend (cairo_win32_display_surface_t *dst)
 {
-    if ((dst->win32.flags & CAIRO_WIN32_SURFACE_CAN_ALPHABLEND) == 0)
-	return FALSE;
-
-    return to_win32_device(dst->win32.base.device)->alpha_blend != NULL;
+    return (dst->win32.flags & CAIRO_WIN32_SURFACE_CAN_ALPHABLEND) != 0;
 }
 
 static cairo_status_t

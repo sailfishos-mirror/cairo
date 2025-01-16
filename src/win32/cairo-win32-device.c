@@ -90,18 +90,6 @@ D2D1_RENDER_TARGET_PROPERTIES props = D2D1::RenderTargetProperties(D2D1_RENDER_T
 hr = m_pD2DFactory->CreateDCRenderTarget(&props, &device->d2d);
 #endif
 
-static void *
-_cairo_win32_device_get_alpha_blend (cairo_win32_device_t *device)
-{
-    void *func = NULL;
-
-    device->msimg32_dll = LoadLibraryW (L"msimg32");
-    if (device->msimg32_dll)
-	func = GetProcAddress (device->msimg32_dll, "AlphaBlend");
-
-    return func;
-}
-
 cairo_device_t *
 _cairo_win32_device_get (void)
 {
@@ -117,9 +105,6 @@ _cairo_win32_device_get (void)
     _cairo_device_init (&device->base, &_cairo_win32_device_backend);
 
     device->compositor = _cairo_win32_gdi_compositor_get ();
-
-    device->msimg32_dll = NULL;
-    device->alpha_blend = _cairo_win32_device_get_alpha_blend (device);
 
     if (_cairo_atomic_ptr_cmpxchg ((cairo_atomic_intptr_t *)&__cairo_win32_device, NULL, device))
 	return cairo_device_reference(&device->base);
