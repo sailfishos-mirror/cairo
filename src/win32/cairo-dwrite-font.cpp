@@ -838,7 +838,8 @@ _cairo_dwrite_scaled_font_init_glyph_metrics(cairo_dwrite_scaled_font_t *scaled_
  * Used to determine the path of the glyphs.
  */
 
-class GeometryRecorder : public IDWriteGeometrySink
+class GeometryRecorder final
+    : public IDWriteGeometrySink
 {
 public:
     GeometryRecorder(cairo_path_fixed_t *aCairoPath, const cairo_matrix_t &matrix)
