@@ -90,25 +90,10 @@ D2D1_RENDER_TARGET_PROPERTIES props = D2D1::RenderTargetProperties(D2D1_RENDER_T
 hr = m_pD2DFactory->CreateDCRenderTarget(&props, &device->d2d);
 #endif
 
-static cairo_bool_t is_win98 (void)
-{
-    OSVERSIONINFO os;
-
-    os.dwOSVersionInfoSize = sizeof (os);
-    GetVersionEx (&os);
-
-    return (VER_PLATFORM_WIN32_WINDOWS == os.dwPlatformId &&
-	    os.dwMajorVersion == 4 &&
-	    os.dwMinorVersion == 10);
-}
-
 static void *
 _cairo_win32_device_get_alpha_blend (cairo_win32_device_t *device)
 {
     void *func = NULL;
-
-    if (is_win98 ())
-	return NULL;
 
     device->msimg32_dll = LoadLibraryW (L"msimg32");
     if (device->msimg32_dll)
