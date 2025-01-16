@@ -846,7 +846,7 @@ public:
 	, mMatrix(matrix) {}
 
     // IUnknown interface
-    IFACEMETHOD (QueryInterface)(IID const& iid, OUT void** ppObject) override
+    IFACEMETHOD (QueryInterface)(IID const& iid, OUT void** ppObject) noexcept override
     {
 	if (iid != __uuidof(IDWriteGeometrySink))
 	    return E_NOINTERFACE;
@@ -856,34 +856,34 @@ public:
 	return S_OK;
     }
 
-    IFACEMETHOD_(ULONG, AddRef)() override
+    IFACEMETHOD_(ULONG, AddRef)() noexcept override
     {
 	return 1;
     }
 
-    IFACEMETHOD_(ULONG, Release)() override
+    IFACEMETHOD_(ULONG, Release)() noexcept override
     {
 	return 1;
     }
 
-    IFACEMETHOD_(void, SetFillMode)(D2D1_FILL_MODE fillMode) override
+    IFACEMETHOD_(void, SetFillMode)(D2D1_FILL_MODE fillMode) noexcept override
     {
 	return;
     }
 
-    IFACEMETHOD (Close)() override
+    IFACEMETHOD (Close)() noexcept override
     {
 	return S_OK;
     }
 
-    IFACEMETHOD_(void, SetSegmentFlags)(D2D1_PATH_SEGMENT vertexFlags) override
+    IFACEMETHOD_(void, SetSegmentFlags)(D2D1_PATH_SEGMENT vertexFlags) noexcept override
     {
 	return;
     }
 
     IFACEMETHOD_(void, BeginFigure)(
 	D2D1_POINT_2F startPoint,
-	D2D1_FIGURE_BEGIN figureBegin) override
+	D2D1_FIGURE_BEGIN figureBegin) noexcept override
     {
 	double x = startPoint.x;
 	double y = startPoint.y;
@@ -897,7 +897,7 @@ public:
     }
 
     IFACEMETHOD_(void, EndFigure)(
-	D2D1_FIGURE_END figureEnd) override
+	D2D1_FIGURE_END figureEnd) noexcept override
     {
 	if (figureEnd == D2D1_FIGURE_END_CLOSED) {
 	    cairo_status_t status = _cairo_path_fixed_line_to(mCairoPath,
@@ -909,7 +909,7 @@ public:
 
     IFACEMETHOD_(void, AddBeziers)(
 	const D2D1_BEZIER_SEGMENT *beziers,
-	UINT beziersCount) override
+	UINT beziersCount) noexcept override
     {
 	for (unsigned int i = 0; i < beziersCount; i++) {
 	    double x1 = beziers[i].point1.x;
@@ -934,7 +934,7 @@ public:
 
     IFACEMETHOD_(void, AddLines)(
 	const D2D1_POINT_2F *points,
-	UINT pointsCount) override
+	UINT pointsCount) noexcept override
     {
 	for (unsigned int i = 0; i < pointsCount; i++) {
 	    double x = points[i].x;
