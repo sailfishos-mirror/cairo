@@ -319,7 +319,7 @@ _cairo_win32_surface_emit_glyphs (cairo_win32_surface_t *dst,
                              num_glyphs,
                              dxy_buf);
     if (!win_result) {
-        _cairo_win32_print_gdi_error("_cairo_win32_surface_show_glyphs(ExtTextOutW failed)");
+        fprintf (stderr, "%s:%s\n", __FUNCTION__, "ExtTextOut");
     }
 
     RestoreDC(dst->dc, -1);

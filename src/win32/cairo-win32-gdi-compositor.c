@@ -166,8 +166,10 @@ fill_boxes (cairo_win32_display_surface_t	*dst,
 
     fb.dc = dst->win32.dc;
     fb.brush = CreateSolidBrush (color_to_rgb(color));
-    if (!fb.brush)
-	return _cairo_win32_print_gdi_error (__FUNCTION__);
+    if (!fb.brush) {
+        fprintf (stderr, "%s:%s\n", __FUNCTION__, "CreateSolidBrush");
+        return _cairo_error (CAIRO_STATUS_WIN32_GDI_ERROR);
+    }
 
     if (! _cairo_boxes_for_each_box (boxes, fill_box, &fb))
 	status = CAIRO_INT_STATUS_UNSUPPORTED;
