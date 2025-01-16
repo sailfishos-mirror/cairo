@@ -846,7 +846,7 @@ public:
 	, mMatrix(matrix) {}
 
     // IUnknown interface
-    IFACEMETHOD (QueryInterface)(IID const& iid, OUT void** ppObject)
+    IFACEMETHOD (QueryInterface)(IID const& iid, OUT void** ppObject) override
     {
 	if (iid != __uuidof(IDWriteGeometrySink))
 	    return E_NOINTERFACE;
@@ -856,34 +856,34 @@ public:
 	return S_OK;
     }
 
-    IFACEMETHOD_(ULONG, AddRef)()
+    IFACEMETHOD_(ULONG, AddRef)() override
     {
 	return 1;
     }
 
-    IFACEMETHOD_(ULONG, Release)()
+    IFACEMETHOD_(ULONG, Release)() override
     {
 	return 1;
     }
 
-    IFACEMETHOD_(void, SetFillMode)(D2D1_FILL_MODE fillMode)
+    IFACEMETHOD_(void, SetFillMode)(D2D1_FILL_MODE fillMode) override
     {
 	return;
     }
 
-    IFACEMETHOD (Close)()
+    IFACEMETHOD (Close)() override
     {
 	return S_OK;
     }
 
-    IFACEMETHOD_(void, SetSegmentFlags)(D2D1_PATH_SEGMENT vertexFlags)
+    IFACEMETHOD_(void, SetSegmentFlags)(D2D1_PATH_SEGMENT vertexFlags) override
     {
 	return;
     }
 
     IFACEMETHOD_(void, BeginFigure)(
 	D2D1_POINT_2F startPoint,
-	D2D1_FIGURE_BEGIN figureBegin)
+	D2D1_FIGURE_BEGIN figureBegin) override
     {
 	double x = startPoint.x;
 	double y = startPoint.y;
@@ -897,7 +897,7 @@ public:
     }
 
     IFACEMETHOD_(void, EndFigure)(
-	D2D1_FIGURE_END figureEnd)
+	D2D1_FIGURE_END figureEnd) override
     {
 	if (figureEnd == D2D1_FIGURE_END_CLOSED) {
 	    cairo_status_t status = _cairo_path_fixed_line_to(mCairoPath,
@@ -909,7 +909,7 @@ public:
 
     IFACEMETHOD_(void, AddBeziers)(
 	const D2D1_BEZIER_SEGMENT *beziers,
-	UINT beziersCount)
+	UINT beziersCount) override
     {
 	for (unsigned int i = 0; i < beziersCount; i++) {
 	    double x1 = beziers[i].point1.x;
@@ -934,7 +934,7 @@ public:
 
     IFACEMETHOD_(void, AddLines)(
 	const D2D1_POINT_2F *points,
-	UINT pointsCount)
+	UINT pointsCount) override
     {
 	for (unsigned int i = 0; i < pointsCount; i++) {
 	    double x = points[i].x;
