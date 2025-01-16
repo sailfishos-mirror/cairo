@@ -845,15 +845,18 @@ public:
 	: mCairoPath(aCairoPath)
 	, mMatrix(matrix) {}
 
-    // IUnknown interface
     IFACEMETHOD (QueryInterface)(IID const& iid, OUT void** ppObject) noexcept override
     {
-	if (iid != __uuidof(IDWriteGeometrySink))
-	    return E_NOINTERFACE;
+        if (iid == __uuidof (IUnknown) ||
+            iid == __uuidof (IDWriteGeometrySink))
+        {
+            AddRef();
+            *ppObject = this;
+            return S_OK;
+        }
 
-	*ppObject = static_cast<IDWriteGeometrySink*>(this);
-
-	return S_OK;
+        *ppObject = nullptr;
+        return E_NOINTERFACE;
     }
 
     IFACEMETHOD_(ULONG, AddRef)() noexcept override
