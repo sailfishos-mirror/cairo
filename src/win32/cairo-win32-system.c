@@ -80,20 +80,11 @@ _cairo_win32_print_api_error (const char *context, const char *api)
 }
 
 #if CAIRO_MUTEX_IMPL_WIN32
-#if !CAIRO_WIN32_STATIC_BUILD
 
-/* declare to avoid "no previous prototype for 'DllMain'" warning */
-BOOL WINAPI
-DllMain (HINSTANCE hinstDLL,
-         DWORD     fdwReason,
-         LPVOID    lpvReserved);
-
-BOOL WINAPI
-DllMain (HINSTANCE hinstDLL,
-         DWORD     fdwReason,
-         LPVOID    lpvReserved)
+static void NTAPI
+cairo_win32_tls_callback (PVOID hinstance, DWORD dwReason, PVOID lpvReserved)
 {
-    switch (fdwReason) {
+    switch (dwReason) {
         case DLL_PROCESS_ATTACH:
             CAIRO_MUTEX_INITIALIZE ();
             break;
@@ -102,9 +93,50 @@ DllMain (HINSTANCE hinstDLL,
             CAIRO_MUTEX_FINALIZE ();
             break;
     }
-
-    return TRUE;
 }
 
+#ifdef _MSC_VER
+
+#ifdef _M_IX86
+# define SYMBOL_PREFIX "_"
+#else
+# define SYMBOL_PREFIX ""
 #endif
+
+#ifdef __cplusplus
+# define EXTERN_C_BEGIN extern "C" {
+# define EXTERN_C_END }
+# define EXTERN_CONST extern const
+#else
+# define EXTERN_C_BEGIN
+# define EXTERN_C_END
+# define EXTERN_CONST const
 #endif
+
+#define DEFINE_TLS_CALLBACK(func) \
+__pragma (section (".CRT$XLD", long, read))                          \
+                                                                     \
+static void NTAPI func (PVOID, DWORD, PVOID);                        \
+                                                                     \
+EXTERN_C_BEGIN                                                       \
+__declspec (allocate (".CRT$XLD"))                                   \
+EXTERN_CONST PIMAGE_TLS_CALLBACK _ptr_##func = func;                 \
+EXTERN_C_END                                                         \
+                                                                     \
+__pragma (comment (linker, "/INCLUDE:" SYMBOL_PREFIX "_tls_used"))   \
+__pragma (comment (linker, "/INCLUDE:" SYMBOL_PREFIX "_ptr_" #func))
+
+#else /* _MSC_VER */
+
+#define DEFINE_TLS_CALLBACK(func) \
+static void NTAPI func (PVOID, DWORD, PVOID);        \
+                                                     \
+__attribute__ ((used, section (".CRT$XLD")))         \
+static const PIMAGE_TLS_CALLBACK _ptr_##func = func;
+
+
+#endif /* !_MSC_VER */
+
+DEFINE_TLS_CALLBACK (cairo_win32_tls_callback);
+
+#endif /* CAIRO_MUTEX_IMPL_WIN32 */
