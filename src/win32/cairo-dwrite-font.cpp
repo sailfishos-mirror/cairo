@@ -137,8 +137,9 @@ public:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-function-type"
 #endif
+            HMODULE d2d1 = _cairo_win32_load_library_from_system32 (L"d2d1.dll");
 	    D2D1CreateFactoryFunc createD2DFactory = (D2D1CreateFactoryFunc)
-		GetProcAddress(LoadLibraryW(L"d2d1.dll"), "D2D1CreateFactory");
+                GetProcAddress(d2d1, "D2D1CreateFactory");
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif

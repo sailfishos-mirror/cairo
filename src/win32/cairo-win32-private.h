@@ -237,6 +237,9 @@ _cairo_win32_scaled_font_is_bitmap (cairo_scaled_font_t *scaled_font);
 cairo_public BYTE
 cairo_win32_get_system_text_quality (void);
 
+HMODULE
+_cairo_win32_load_library_from_system32 (const wchar_t *name);
+
 #if CAIRO_HAS_DWRITE_FONT
 
 cairo_int_status_t

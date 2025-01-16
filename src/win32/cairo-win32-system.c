@@ -79,6 +79,34 @@ _cairo_win32_print_api_error (const char *context, const char *api)
     return _cairo_error (CAIRO_STATUS_WIN32_GDI_ERROR);
 }
 
+/**
+ * _cairo_win32_load_library_from_system32:
+ * @name: name of the module to load from System32
+ *
+ * Helper function to load system modules in the System32
+ * folder.
+ *
+ * Return value: An module HANDLE, NULL on error.
+ **/
+HMODULE
+_cairo_win32_load_library_from_system32 (const wchar_t *name)
+{
+    HMODULE module_handle;
+
+    module_handle = LoadLibraryExW (name, NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    if (module_handle == NULL) {
+        DWORD code = GetLastError();
+        if (code == ERROR_INVALID_PARAMETER) {
+            /* Support for flag LOAD_LIBRARY_SEARCH_SYSTEM32 was backported
+             * to Windows Vista / 7 with Update KB2533623. If the flag is
+             * not supported, simply use LoadLibrary */
+            return LoadLibraryW (name);
+        }
+    }
+
+    return module_handle;
+}
+
 #if CAIRO_MUTEX_IMPL_WIN32
 
 static void NTAPI
