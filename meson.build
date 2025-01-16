@@ -2,6 +2,7 @@ project('cairo', 'c',
   meson_version: '>= 1.3.0',
   version: run_command(find_program('version.py'), check: true).stdout().strip(),
   default_options: ['c_std=gnu11,c11',
+                    'cpp_std=gnu++11,c++11',
                     'warning_level=2'],
 )
 
