@@ -56,10 +56,6 @@
 #include <wchar.h>
 #include <windows.h>
 
-#if defined(__MINGW32__) && !defined(ETO_PDY)
-# define ETO_PDY 0x2000
-#endif
-
 #define PELS_72DPI  ((LONG)(72. / 0.0254))
 
 /**

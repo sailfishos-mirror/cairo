@@ -44,13 +44,6 @@
 #include "cairo-surface-clipper-private.h"
 #include "cairo-surface-private.h"
 
-#ifndef SHADEBLENDCAPS
-#define SHADEBLENDCAPS 120
-#endif
-#ifndef SB_NONE
-#define SB_NONE 0
-#endif
-
 #define WIN32_FONT_LOGICAL_SCALE 32
 
 CAIRO_BEGIN_DECLS

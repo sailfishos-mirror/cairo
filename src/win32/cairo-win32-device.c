@@ -76,20 +76,6 @@ static const cairo_device_backend_t _cairo_win32_device_backend = {
     _cairo_win32_device_destroy,
 };
 
-#if 0
-D2D1_RENDER_TARGET_PROPERTIES props = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_DEFAULT,
-								   D2D1::PixelFormat(
-										     DXGI_FORMAT_B8G8R8A8_UNORM,
-										     D2D1_ALPHA_MODE_IGNORE),
-								   0,
-								   0,
-								   D2D1_RENDER_TARGET_USAGE_NONE,
-								   D2D1_FEATURE_LEVEL_DEFAULT
-								  );
-
-hr = m_pD2DFactory->CreateDCRenderTarget(&props, &device->d2d);
-#endif
-
 cairo_device_t *
 _cairo_win32_device_get (void)
 {

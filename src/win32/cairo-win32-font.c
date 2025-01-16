@@ -45,19 +45,6 @@
 
 #include <wchar.h>
 
-#ifndef SPI_GETFONTSMOOTHINGTYPE
-#define SPI_GETFONTSMOOTHINGTYPE 0x200a
-#endif
-#ifndef FE_FONTSMOOTHINGCLEARTYPE
-#define FE_FONTSMOOTHINGCLEARTYPE 2
-#endif
-#ifndef CLEARTYPE_QUALITY
-#define CLEARTYPE_QUALITY 5
-#endif
-#ifndef TT_PRIM_CSPLINE
-#define TT_PRIM_CSPLINE 3
-#endif
-
 #define CMAP_TAG 0x70616d63
 
 /**

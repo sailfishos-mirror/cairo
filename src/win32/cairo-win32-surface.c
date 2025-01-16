@@ -53,10 +53,6 @@
 #include <wchar.h>
 #include <windows.h>
 
-#if defined(__MINGW32__) && !defined(ETO_PDY)
-# define ETO_PDY 0x2000
-#endif
-
 /**
  * SECTION:cairo-win32
  * @Title: Win32 Surfaces

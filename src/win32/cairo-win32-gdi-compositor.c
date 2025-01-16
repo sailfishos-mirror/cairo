@@ -55,23 +55,6 @@
 #include "cairo-surface-inline.h"
 #include "cairo-surface-offset-private.h"
 
-#if !defined(AC_SRC_OVER)
-#define AC_SRC_OVER                 0x00
-#pragma pack(1)
-typedef struct {
-    BYTE   BlendOp;
-    BYTE   BlendFlags;
-    BYTE   SourceConstantAlpha;
-    BYTE   AlphaFormat;
-}BLENDFUNCTION;
-#pragma pack()
-#endif
-
-/* for compatibility with VC++ 6 */
-#ifndef AC_SRC_ALPHA
-#define AC_SRC_ALPHA                0x01
-#endif
-
 #define PELS_72DPI  ((LONG)(72. / 0.0254))
 
 /* the low-level interface */

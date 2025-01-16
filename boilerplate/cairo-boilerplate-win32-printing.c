@@ -36,22 +36,6 @@
 
 #include <windows.h>
 
-#if !defined(POSTSCRIPT_IDENTIFY)
-# define POSTSCRIPT_IDENTIFY 0x1015
-#endif
-
-#if !defined(PSIDENT_GDICENTRIC)
-# define PSIDENT_GDICENTRIC 0x0000
-#endif
-
-#if !defined(GET_PS_FEATURESETTING)
-# define GET_PS_FEATURESETTING 0x1019
-#endif
-
-#if !defined(FEATURESETTING_PSLEVEL)
-# define FEATURESETTING_PSLEVEL 0x0002
-#endif
-
 static cairo_status_t
 _cairo_win32_print_gdi_error (const char *context)
 {
