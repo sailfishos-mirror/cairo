@@ -90,7 +90,9 @@ cairo_win32_tls_callback (PVOID hinstance, DWORD dwReason, PVOID lpvReserved)
             break;
 
         case DLL_PROCESS_DETACH:
-            CAIRO_MUTEX_FINALIZE ();
+            if (lpvReserved == NULL) {
+                CAIRO_MUTEX_FINALIZE ();
+            }
             break;
     }
 }
