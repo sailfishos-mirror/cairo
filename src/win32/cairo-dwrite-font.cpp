@@ -838,52 +838,56 @@ _cairo_dwrite_scaled_font_init_glyph_metrics(cairo_dwrite_scaled_font_t *scaled_
  * Used to determine the path of the glyphs.
  */
 
-class GeometryRecorder : public IDWriteGeometrySink
+class GeometryRecorder final
+    : public IDWriteGeometrySink
 {
 public:
     GeometryRecorder(cairo_path_fixed_t *aCairoPath, const cairo_matrix_t &matrix)
 	: mCairoPath(aCairoPath)
 	, mMatrix(matrix) {}
 
-    // IUnknown interface
-    IFACEMETHOD(QueryInterface)(IID const& iid, OUT void** ppObject)
+    IFACEMETHOD (QueryInterface)(IID const& iid, OUT void** ppObject) noexcept override
     {
-	if (iid != __uuidof(IDWriteGeometrySink))
-	    return E_NOINTERFACE;
+        if (iid == __uuidof (IUnknown) ||
+            iid == __uuidof (IDWriteGeometrySink))
+        {
+            AddRef();
+            *ppObject = this;
+            return S_OK;
+        }
 
-	*ppObject = static_cast<IDWriteGeometrySink*>(this);
-
-	return S_OK;
+        *ppObject = nullptr;
+        return E_NOINTERFACE;
     }
 
-    IFACEMETHOD_(ULONG, AddRef)()
-    {
-	return 1;
-    }
-
-    IFACEMETHOD_(ULONG, Release)()
+    IFACEMETHOD_(ULONG, AddRef)() noexcept override
     {
 	return 1;
     }
 
-    IFACEMETHODIMP_(void) SetFillMode(D2D1_FILL_MODE fillMode)
+    IFACEMETHOD_(ULONG, Release)() noexcept override
+    {
+	return 1;
+    }
+
+    IFACEMETHOD_(void, SetFillMode)(D2D1_FILL_MODE fillMode) noexcept override
     {
 	return;
     }
 
-    STDMETHODIMP Close()
+    IFACEMETHOD (Close)() noexcept override
     {
 	return S_OK;
     }
 
-    IFACEMETHODIMP_(void) SetSegmentFlags(D2D1_PATH_SEGMENT vertexFlags)
+    IFACEMETHOD_(void, SetSegmentFlags)(D2D1_PATH_SEGMENT vertexFlags) noexcept override
     {
 	return;
     }
 
-    IFACEMETHODIMP_(void) BeginFigure(
+    IFACEMETHOD_(void, BeginFigure)(
 	D2D1_POINT_2F startPoint,
-	D2D1_FIGURE_BEGIN figureBegin)
+	D2D1_FIGURE_BEGIN figureBegin) noexcept override
     {
 	double x = startPoint.x;
 	double y = startPoint.y;
@@ -896,8 +900,8 @@ public:
 	(void)status; /* squelch warning */
     }
 
-    IFACEMETHODIMP_(void) EndFigure(
-	D2D1_FIGURE_END figureEnd)
+    IFACEMETHOD_(void, EndFigure)(
+	D2D1_FIGURE_END figureEnd) noexcept override
     {
 	if (figureEnd == D2D1_FIGURE_END_CLOSED) {
 	    cairo_status_t status = _cairo_path_fixed_line_to(mCairoPath,
@@ -907,9 +911,9 @@ public:
 	}
     }
 
-    IFACEMETHODIMP_(void) AddBeziers(
+    IFACEMETHOD_(void, AddBeziers)(
 	const D2D1_BEZIER_SEGMENT *beziers,
-	UINT beziersCount)
+	UINT beziersCount) noexcept override
     {
 	for (unsigned int i = 0; i < beziersCount; i++) {
 	    double x1 = beziers[i].point1.x;
@@ -932,9 +936,9 @@ public:
 	}
     }
 
-    IFACEMETHODIMP_(void) AddLines(
+    IFACEMETHOD_(void, AddLines)(
 	const D2D1_POINT_2F *points,
-	UINT pointsCount)
+	UINT pointsCount) noexcept override
     {
 	for (unsigned int i = 0; i < pointsCount; i++) {
 	    double x = points[i].x;
@@ -1689,7 +1693,6 @@ _dwrite_draw_glyphs_to_gdi_surface_d2d(cairo_win32_surface_t *surface,
     if (FAILED(hr))
 	return CAIRO_INT_STATUS_UNSUPPORTED;
 
-    float x = 0, y = 0;
     if (transform) {
 	rt->SetTransform(D2D1::Matrix3x2F(transform->m11,
 					  transform->m12,
@@ -1722,7 +1725,6 @@ _cairo_dwrite_show_glyphs_on_surface(void			*surface,
 {
     // TODO: Check font & surface for types.
     cairo_dwrite_scaled_font_t *dwritesf = reinterpret_cast<cairo_dwrite_scaled_font_t*>(scaled_font);
-    cairo_dwrite_font_face_t *dwriteff = reinterpret_cast<cairo_dwrite_font_face_t*>(scaled_font->font_face);
     cairo_win32_surface_t *dst = reinterpret_cast<cairo_win32_surface_t*>(surface);
     cairo_int_status_t status;
     /* We can only handle dwrite fonts */
@@ -1746,10 +1748,6 @@ _cairo_dwrite_show_glyphs_on_surface(void			*surface,
 
     AutoDWriteGlyphRun run;
     run.allocate(num_glyphs);
-
-    UINT16 *indices = const_cast<UINT16*>(run.glyphIndices);
-    FLOAT *advances = const_cast<FLOAT*>(run.glyphAdvances);
-    DWRITE_GLYPH_OFFSET *offsets = const_cast<DWRITE_GLYPH_OFFSET*>(run.glyphOffsets);
 
     BOOL transform = FALSE;
     _cairo_dwrite_glyph_run_from_glyphs(glyphs, num_glyphs, dwritesf, &run, &transform);
