@@ -84,8 +84,9 @@ public:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-function-type"
 #endif
+            HMODULE dwrite = _cairo_win32_load_library_from_system32 (L"dwrite.dll");
 	    DWriteCreateFactoryFunc createDWriteFactory = (DWriteCreateFactoryFunc)
-		GetProcAddress(LoadLibraryW(L"dwrite.dll"), "DWriteCreateFactory");
+                GetProcAddress(dwrite, "DWriteCreateFactory");
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
