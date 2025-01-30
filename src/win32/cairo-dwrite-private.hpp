@@ -68,7 +68,8 @@ struct _cairo_dwrite_scaled_font {
     cairo_matrix_t mat;
     cairo_matrix_t mat_inverse;
     cairo_antialias_t antialias_mode;
-    IDWriteRenderingParams *rendering_params;
+    IDWriteFontFace *dwriteface; /* Can't use RefPtr because this struct is malloc'd.  */
+    IDWriteRenderingParams *rendering_params; /* Can't use RefPtr because this struct is malloc'd.  */
     DWRITE_MEASURING_MODE measuring_mode;
 };
 typedef struct _cairo_dwrite_scaled_font cairo_dwrite_scaled_font_t;
