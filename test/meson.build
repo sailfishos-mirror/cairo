@@ -670,6 +670,14 @@ if build_machine.system() != 'windows'
               meson.current_source_dir(),
               meson.current_build_dir() / 'srcdir',
               check: true)
+elif not fs.exists(meson.current_build_dir() / 'srcdir')
+  cmd = find_program(find_program('cmd').full_path().replace('/', '\\'))
+  run_command(cmd, '/C', 'mklink', '/j', '%LINK%', '%TARGET%',
+              env: [
+                'LINK="@0@"'.format(meson.current_build_dir() / 'srcdir'),
+                'TARGET="@0@"'.format(meson.current_source_dir()),
+              ],
+              check: true)
 endif
 
 if ttx.found()
