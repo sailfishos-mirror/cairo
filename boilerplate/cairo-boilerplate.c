@@ -945,7 +945,11 @@ POPEN:
 
     *close_cb = pclose;
     sprintf (command, "%s %s %d", any2ppm, filename, page);
+#ifndef _WIN32
     return popen (command, "r");
+#else
+    return popen (command, "rb");
+#endif
 }
 
 static cairo_bool_t
