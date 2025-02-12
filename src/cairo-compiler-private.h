@@ -164,8 +164,8 @@
 #define popen _popen
 #define strdup _strdup
 #define unlink _unlink
-#if _MSC_VER < 1900
-  #define vsnprintf _vsnprintf // TODO
+#if defined (_MSC_VER) && _MSC_VER < 1900
+  #define vsnprintf _vsnprintf
   #define snprintf _snprintf
 #endif
 #endif
