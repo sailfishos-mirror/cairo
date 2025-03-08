@@ -1,6 +1,7 @@
 [constants]
 ndk_path    = '/android/ndk'
-toolchain   = ndk_path + '/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android'
+ndk_bindir   = ndk_path + '/toolchains/llvm/prebuilt/linux-x86_64/bin/'
+toolchain   = ndk_bindir + 'aarch64-linux-android'
 api         = '28'
 
 [host_machine]
@@ -10,12 +11,12 @@ cpu         = 'aarch64'
 endian      = 'little'
 
 [properties]
-sys_root        = ndk_path + '/sysroot'
-c_link_args     = ['-fuse-ld=gold']
-cpp_link_args   = ['-fuse-ld=gold']
+sys_root    = ndk_path + '/sysroot'
+c_ld        = 'gold'
+cpp_ld      = 'gold'
 
 [binaries]
 c           = toolchain + api + '-clang'
 cpp         = toolchain + api + '-clang++'
-ar          = toolchain + '-ar'
-strip       = toolchain + '-strip'
+ar          = ndk_bindir + 'llvm-ar'
+strip       = ndk_bindir + 'llvm-strip'
