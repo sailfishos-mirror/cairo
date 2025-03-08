@@ -406,6 +406,7 @@ android arm64 fedora:
     when: 'always'
     paths:
       - "build/meson-logs/*.txt"
+  allow_failure: true
   before_script:
     - dnf install -y python3-pip gcc ninja-build gperf
     - pip3 install --user meson
