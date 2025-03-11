@@ -16,7 +16,7 @@ workflow:
 variables:
   FDO_UPSTREAM_REPO: 'cairo/cairo'
   FDO_DISTRIBUTION_VERSION: '40'
-  FDO_DISTRIBUTION_TAG: '2024-07-26-coverage.0'
+  FDO_DISTRIBUTION_TAG: '2025-03-12-android.0'
 
   # TODO: should probably get its own image at some point instead of reusing the GStreamer one
   # See https://gitlab.freedesktop.org/gstreamer/gstreamer/-/blob/main/.gitlab-image-tags.yml for latest
@@ -28,6 +28,9 @@ variables:
 
   RUST_STABLE: "1.80.0"
   RUSTUP_VERSION: "1.27.1"
+
+  ANDROID_HOME: "/android/sdk"
+  ANDROID_NDK_HOME: "/android/ndk"
 
 stages:
   - prep
@@ -70,11 +73,13 @@ fedora image:
     - placeholder-job
   variables:
     FDO_DISTRIBUTION_PACKAGES: >
+      binutils-gold
       meson
       ninja-build
       ccache
       gcc
       g++
+      gperf
       zlib-devel
       expat-devel
       libpng-devel
@@ -101,8 +106,10 @@ fedora image:
       google-noto-emoji-color-fonts
       google-noto-sans-vf-fonts
       fonttools
+      unzip
       util-linux
       poppler-utils
+      python3-pip
       clang
       clang-analyzer
       clang-tools-extra
@@ -117,6 +124,7 @@ fedora image:
                               --arch x86_64-unknown-linux-gnu &&
       bash .gitlab-ci/install-rust-tools.sh &&
       bash .gitlab-ci/install-grcov.sh &&
+      bash .gitlab-ci/install-android-toolchain.sh $ANDROID_HOME $ANDROID_NDK_HOME &&
       rm -rf /root/.cargo /root/.cache    # cleanup compilation dirs; binaries are installed now
 
 .build fedora:
@@ -398,10 +406,8 @@ vs2019 shared x86:
     EXTRA_MESON_ARGS: '--default-library=shared'
 
 android arm64 fedora:
-  # TODO: should probably build our own image here some day
-  # See https://gitlab.freedesktop.org/gstreamer/gstreamer/container_registry/7689 for current images
-  image: 'registry.freedesktop.org/gstreamer/cerbero/android:2024-11-01.0'
-  needs: []
+  extends:
+    - '.fdo.distribution-image@fedora'
   stage: 'build'
   artifacts:
     name: "${CI_JOB_NAME}_${CI_COMMIT_SHA}"
@@ -409,11 +415,7 @@ android arm64 fedora:
     when: 'always'
     paths:
       - "build/meson-logs/*.txt"
-  before_script:
-    - dnf install -y python3-pip gcc ninja-build gperf binutils-gold
-    - pip3 install --user meson
   script:
-    - export PATH="$HOME/.local/bin:$PATH"
     - meson setup --cross-file .gitlab-ci/android-cross-file.txt -Dpixman:a64-neon=disabled build
     - meson compile --verbose -C build
 
