@@ -414,31 +414,7 @@ android arm64 fedora:
     - pip3 install --user meson
   script:
     - export PATH="$HOME/.local/bin:$PATH"
-    - |
-      cat > android-cross-file.txt <<EOF
-      [constants]
-      ndk_path    = '/android/ndk'
-      toolchain   = ndk_path + '/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android'
-      api         = '28'
-
-      [host_machine]
-      system      = 'android'
-      cpu_family  = 'aarch64'
-      cpu         = 'aarch64'
-      endian      = 'little'
-
-      [properties]
-      sys_root        = ndk_path + '/sysroot'
-      c_link_args     = ['-fuse-ld=gold']
-      cpp_link_args   = ['-fuse-ld=gold']
-
-      [binaries]
-      c           = toolchain + api + '-clang'
-      cpp         = toolchain + api + '-clang++'
-      ar          = toolchain + '-ar'
-      strip       = toolchain + '-strip'
-      EOF
-    - meson setup --cross-file android-cross-file.txt -Dpixman:a64-neon=disabled build
+    - meson setup --cross-file .gitlab-ci/android-cross-file.txt -Dpixman:a64-neon=disabled build
     - meson compile --verbose -C build
 
 macOS x86 host:
