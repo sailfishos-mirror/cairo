@@ -26,8 +26,8 @@ variables:
   DEFAULT_MESON_ARGS: >
     --default-library=both
 
-  RUST_STABLE: "1.80.0"
-  RUSTUP_VERSION: "1.27.1"
+  RUST_STABLE: "1.85.0"
+  RUSTUP_VERSION: "1.28.1"
 
   ANDROID_HOME: "/android/sdk"
   ANDROID_NDK_HOME: "/android/ndk"
