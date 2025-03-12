@@ -66,6 +66,8 @@ fedora image:
   extends:
    - '.fdo.container-build@fedora'
   stage: 'prep'
+  tags:
+    - placeholder-job
   variables:
     FDO_DISTRIBUTION_PACKAGES: >
       meson
