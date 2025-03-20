@@ -539,7 +539,7 @@ if host_machine.system() == 'windows'
 
     add_project_arguments('-DWINVER=_WIN32_WINNT_WIN10', '-D_WIN32_WINNT=_WIN32_WINNT_WIN10', '-DNTDDI_VERSION=NTDDI_WIN10_RS3', language: ['c', 'cpp'])
   else
-    add_project_arguments('-DWINVER=_WIN32_WINNT_WIN2K', '-D_WIN32_WINNT=_WIN32_WINNT_WIN2K', language: ['c', 'cpp'])
+    add_project_arguments('-DWINVER=_WIN32_WINNT_VISTA', '-D_WIN32_WINNT=_WIN32_WINNT_VISTA', language: ['c', 'cpp'])
   endif
 endif
 
