@@ -70,7 +70,7 @@ fedora image:
    - '.fdo.container-build@fedora'
   stage: 'prep'
   tags:
-    - placeholder-job
+    - kvm
   variables:
     FDO_DISTRIBUTION_PACKAGES: >
       binutils-gold
