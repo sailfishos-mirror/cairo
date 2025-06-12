@@ -1375,10 +1375,6 @@ init_glyph_surface_fallback_a8 (cairo_dwrite_scaled_font_t  *scaled_font,
     if (cairo_surface_status (surface))
         return CAIRO_INT_STATUS_UNSUPPORTED;
 
-    // Tell pixman that it should use component alpha blending when the surface is
-    // used as a source
-    pixman_image_set_component_alpha (((cairo_image_surface_t*)surface)->pixman_image, TRUE);
-
     int stride = cairo_image_surface_get_stride (surface);
     WICRect rect = { 0, 0, width, height };
     bitmap->CopyPixels(&rect,
