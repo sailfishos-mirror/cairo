@@ -1526,7 +1526,7 @@ _cairo_dwrite_scaled_font_init_glyph_surface (cairo_dwrite_scaled_font_t *scaled
 
     if (subpixel_order_is_vertical) {
         // DirectWrite does not support vertical pixel geometries.
-        // As a workaround, apply a simmetry which swaps x and y
+        // As a workaround, apply a symmetry which swaps x and y
         // coordinates, then re-swap while copying the back into
         // the image surface
 
