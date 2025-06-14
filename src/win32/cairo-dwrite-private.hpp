@@ -125,6 +125,16 @@ public:
 	return mFactoryInstance4;
     }
 
+    static RefPtr<IDWriteFactory8> Instance8()
+    {
+        if (!mFactoryInstance8) {
+            if (Instance()) {
+                Instance()->QueryInterface(&mFactoryInstance8);
+            }
+        }
+        return mFactoryInstance8;
+    }
+
     static RefPtr<IDWriteFontCollection> SystemCollection()
     {
 	if (!mSystemCollection) {
@@ -169,6 +179,7 @@ private:
     static RefPtr<IDWriteFactory2> mFactoryInstance2;
     static RefPtr<IDWriteFactory3> mFactoryInstance3;
     static RefPtr<IDWriteFactory4> mFactoryInstance4;
+    static RefPtr<IDWriteFactory8> mFactoryInstance8;
     static RefPtr<IDWriteFontCollection> mSystemCollection;
     static RefPtr<IDWriteRenderingParams> mDefaultRenderingParams;
 };
