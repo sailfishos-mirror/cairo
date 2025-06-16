@@ -516,12 +516,12 @@ if host_machine.system() == 'windows'
   ]
 
   cpp_compiler = meson.get_compiler('cpp')
-  d2d_dep = cpp_compiler.find_library('d2d1', required: get_option('dwrite'))
-  dwrite_dep = cpp_compiler.find_library('dwrite', required: get_option('dwrite'))
-  d2d_3_header = cpp_compiler.has_header('d2d1_3.h')
-  wincodec_dep = cpp_compiler.find_library('windowscodecs', required: get_option('dwrite'))
 
-  if d2d_dep.found() and dwrite_dep.found()
+  if get_option('dwrite').allowed()
+    d2d_dep = cpp_compiler.find_library('d2d1')
+    dwrite_dep = cpp_compiler.find_library('dwrite')
+    wincodec_dep = cpp_compiler.find_library('windowscodecs')
+
     feature_conf.set('CAIRO_HAS_DWRITE_FONT', 1)
     built_features += [{
       'name': 'cairo-dwrite-font',
