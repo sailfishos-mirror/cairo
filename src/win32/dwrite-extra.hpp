@@ -3,6 +3,8 @@
 #ifndef DWRITE_EXTRA_H
 #define DWRITE_EXTRA_H
 
+#include <dwrite_3.h>
+
 #if defined(__MINGW64_VERSION_MAJOR) && __MINGW64_VERSION_MAJOR < 10
 // The DWRITE_COLOR_GLYPH_RUN struct isn't valid.
 // <https://sourceforge.net/p/mingw-w64/bugs/913/>

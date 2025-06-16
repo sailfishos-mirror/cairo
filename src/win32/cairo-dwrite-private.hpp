@@ -36,14 +36,8 @@
 
 #include "cairoint.h"
 #include "cairo-win32-refptr.hpp"
-#include <dwrite_3.h>
-#include "d2d1-extra.hpp"
-
-#ifdef __MINGW32__
 #include "dwrite-extra.hpp"
-#else
-typedef DWRITE_COLOR_GLYPH_RUN1 DWRITE_COLOR_GLYPH_RUN1_WORKAROUND;
-#endif
+#include "d2d1-extra.hpp"
 
 // DirectWrite is not available on all platforms.
 typedef HRESULT (WINAPI*DWriteCreateFactoryFunc)(
