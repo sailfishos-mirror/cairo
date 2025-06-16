@@ -530,11 +530,33 @@ if host_machine.system() == 'windows'
     }]
     deps += [dwrite_dep, d2d_dep, wincodec_dep]
 
-    if cpp_compiler.has_header('d2d1_3.h')
-      conf.set('HAVE_D2D1_3_H', 1)
+    sdk_version_args = [
+      '-DWINVER=_WIN32_WINNT_WIN10',
+      '-D_WIN32_WINNT=_WIN32_WINNT_WIN10',
+      # DWrite / D2D headers define types conditionally on the value of NTDDI_VERSION.
+      # Use an high version to avoid including definitions in-tree. 0x0A000010 ==
+      # NTDDI_WIN11_GE; using the number to stay compatible with not bleeding-edge SDK
+      # headers.
+      '-DNTDDI_VERSION=0x0A000010',
+    ]
+
+    if cpp_compiler.has_header('d2d1_2.h')
+      conf.set('HAVE_D2D1_2_H', 1)
     endif
 
-    add_project_arguments('-DWINVER=_WIN32_WINNT_WIN10', '-D_WIN32_WINNT=_WIN32_WINNT_WIN10', '-DNTDDI_VERSION=NTDDI_WIN10_RS3', language: ['c', 'cpp'])
+    if cpp_compiler.has_header('d2d1_3.h')
+      conf.set('HAVE_D2D1_3_H', 1)
+
+      foreach i : range(2, 8)
+        if cpp_compiler.has_type('ID2D1DeviceContext' + i.to_string(),
+                                 prefix: ['#include <windows.h>', '#include <d2d1_3.h>'],
+                                 args: sdk_version_args)
+          conf.set('HAVE_ID2D1DEVICECONTEXT' + i.to_string(), 1)
+        endif
+      endforeach
+    endif
+
+    add_project_arguments(sdk_version_args, language: ['c', 'cpp'])
   else
     add_project_arguments('-DWINVER=_WIN32_WINNT_WIN2K', '-D_WIN32_WINNT=_WIN32_WINNT_WIN2K', language: ['c', 'cpp'])
   endif
