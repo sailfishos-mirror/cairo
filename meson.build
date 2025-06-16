@@ -95,6 +95,8 @@ if cc.get_id() == 'msvc'
   add_project_arguments('/wd4244', '/wd4146',
                         # Don't warn about double -> float truncation
                         '/wd4305',
+                        # Don't warn about _cairo_status -> _cairo_int_status conversion
+                        '/wd5286',
                         language : ['c', 'cpp'])
 endif
 
