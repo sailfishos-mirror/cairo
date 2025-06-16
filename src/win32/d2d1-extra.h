@@ -108,4 +108,46 @@ ID2D1DeviceContext4 : public ID2D1DeviceContext3
 };
 __CRT_UUID_DECL(ID2D1DeviceContext4, 0x8c427831, 0x3d90, 0x4476, 0xb6, 0x47, 0xc4, 0xfa, 0xe3, 0x49, 0xe4, 0xdb)
 
+DEFINE_GUID(IID_ID2D1DeviceContext5, 0x7836d248, 0x68cc, 0x4df6, 0xb9, 0xe8, 0xde, 0x99, 0x1b, 0xf6, 0x2e, 0xb7);
+MIDL_INTERFACE("7836d248-68cc-4df6-b9e8-de991bf62eb7")
+ID2D1DeviceContext5 : public ID2D1DeviceContext4
+{
+  virtual void STDMETHODCALLTYPE CreateSvgDocument() = 0;
+  virtual void STDMETHODCALLTYPE DrawSvgDocument() = 0;
+  virtual void STDMETHODCALLTYPE CreateColorContextFromDxgiColorSpace() = 0;
+  virtual void STDMETHODCALLTYPE CreateColorContextFromSimpleColorProfile() = 0;
+};
+__CRT_UUID_DECL(ID2D1DeviceContext5, 0x7836d248, 0x68cc, 0x4df6, 0xb9, 0xe8, 0xde, 0x99, 0x1b, 0xf6, 0x2e, 0xb7)
+
+DEFINE_GUID(IID_ID2D1DeviceContext6, 0x985f7e37, 0x4ed0, 0x4a19, 0x98, 0xa3, 0x15, 0xb0, 0xed, 0xfd, 0xe3, 0x06);
+MIDL_INTERFACE("985f7e37-4ed0-4a19-98a3-15b0edfde306")
+ID2D1DeviceContext6 : public ID2D1DeviceContext5
+{
+  virtual void STDMETHODCALLTYPE BlendImage() = 0;
+};
+__CRT_UUID_DECL(ID2D1DeviceContext6, 0x985f7e37, 0x4ed0, 0x4a19, 0x98, 0xa3, 0x15, 0xb0, 0xed, 0xfd, 0xe3, 0x06)
+
+DEFINE_GUID(IID_ID2D1DeviceContext7, 0xec891cf7, 0x9b69, 0x4851, 0x9d, 0xef, 0x4e, 0x09, 0x15, 0x77, 0x1e, 0x62);
+MIDL_INTERFACE("ec891cf7-9b69-4851-9def-4e0915771e62")
+ID2D1DeviceContext7 : public ID2D1DeviceContext6
+{
+    STDMETHOD_(DWRITE_PAINT_FEATURE_LEVEL, GetPaintFeatureLevel)() PURE;
+
+    STDMETHOD_(void, DrawPaintGlyphRun)(D2D1_POINT_2F baselineOrigin,
+                                        CONST DWRITE_GLYPH_RUN *glyphRun,
+                                        ID2D1Brush *defaultFillBrush = nullptr,
+                                        UINT32 colorPaletteIndex = 0,
+                                        DWRITE_MEASURING_MODE measuringMode = DWRITE_MEASURING_MODE_NATURAL) PURE;
+
+    STDMETHOD_(void, DrawGlyphRunWithColorSupport)(D2D1_POINT_2F baselineOrigin,
+                                                   CONST DWRITE_GLYPH_RUN *glyphRun,
+                                                   CONST DWRITE_GLYPH_RUN_DESCRIPTION *glyphRunDescription,
+                                                   ID2D1Brush *foregroundBrush,
+                                                   ID2D1SvgGlyphStyle *svgGlyphStyle,
+                                                   UINT32 colorPaletteIndex = 0,
+                                                   DWRITE_MEASURING_MODE measuringMode = DWRITE_MEASURING_MODE_NATURAL,
+                                                   D2D1_COLOR_BITMAP_GLYPH_SNAP_OPTION bitmapSnapOption = D2D1_COLOR_BITMAP_GLYPH_SNAP_OPTION_DEFAULT) PURE;
+};
+__CRT_UUID_DECL(ID2D1DeviceContext7, 0xec891cf7, 0x9b69, 0x4851, 0x9d, 0xef, 0x4e, 0x09, 0x15, 0x77, 0x1e, 0x62)
+
 #endif
