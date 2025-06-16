@@ -540,6 +540,14 @@ if host_machine.system() == 'windows'
       '-DNTDDI_VERSION=0x0A000010',
     ]
 
+    foreach i : range(8, 9)
+      if cpp_compiler.has_type('IDWriteFactory' + i.to_string(),
+                               prefix: ['#include <windows.h>', '#include <dwrite_3.h>'],
+                               args: sdk_version_args)
+        conf.set('HAVE_IDWRITEFACTORY' + i.to_string(), 1)
+      endif
+    endforeach
+
     if cpp_compiler.has_header('d2d1_2.h')
       conf.set('HAVE_D2D1_2_H', 1)
     endif
