@@ -3,24 +3,21 @@
 /* MinGW workarounds
  *
  * It doesn't define operators for DWRITE_GLYPH_IMAGE_FORMATS.
- * The DWRITE_COLOR_GLYPH_RUN struct isn't valid.
- * <https://sourceforge.net/p/mingw-w64/bugs/913/>
  */
 
 #ifndef DWRITE_EXTRA_H
 #define DWRITE_EXTRA_H
 
 #if defined(__MINGW64_VERSION_MAJOR) && __MINGW64_VERSION_MAJOR < 10
-
-typedef struct DWRITE_COLOR_GLYPH_RUN1_WORKAROUND DWRITE_COLOR_GLYPH_RUN1_WORKAROUND;
+// The DWRITE_COLOR_GLYPH_RUN struct isn't valid.
+// <https://sourceforge.net/p/mingw-w64/bugs/913/>
 struct DWRITE_COLOR_GLYPH_RUN1_WORKAROUND : DWRITE_COLOR_GLYPH_RUN
 {
     DWRITE_GLYPH_IMAGE_FORMATS glyphImageFormat;
     DWRITE_MEASURING_MODE measuringMode;
 };
-
 #else
-typedef DWRITE_COLOR_GLYPH_RUN1 DWRITE_COLOR_GLYPH_RUN1_WORKAROUND;
+using DWRITE_COLOR_GLYPH_RUN1_WORKAROUND = DWRITE_COLOR_GLYPH_RUN1;
 #endif
 
 #if !defined(__MINGW64_VERSION_MAJOR) || __MINGW64_VERSION_MAJOR < 11
