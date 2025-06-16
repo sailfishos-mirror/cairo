@@ -143,16 +143,14 @@ _cairo_win32_scaled_font_init_glyph_path (cairo_win32_scaled_font_t *scaled_font
 static HDC
 _get_global_font_dc (void)
 {
+    static cairo_atomic_once_t once = CAIRO_ATOMIC_ONCE_INIT;
     static DWORD hdc_tls_index;
     HDC hdc;
 
-    if (!hdc_tls_index) {
-	CAIRO_MUTEX_LOCK (_cairo_win32_font_dc_mutex);
-	if (!hdc_tls_index) {
-	    hdc_tls_index = TlsAlloc ();
-	    assert (hdc_tls_index != TLS_OUT_OF_INDEXES);
-	}
-	CAIRO_MUTEX_UNLOCK (_cairo_win32_font_dc_mutex);
+    if (!_cairo_atomic_init_once_enter (&once)) {
+        hdc_tls_index = TlsAlloc ();
+        assert (hdc_tls_index != TLS_OUT_OF_INDEXES);
+        _cairo_atomic_init_once_leave (&once);
     }
 
     hdc = TlsGetValue (hdc_tls_index);

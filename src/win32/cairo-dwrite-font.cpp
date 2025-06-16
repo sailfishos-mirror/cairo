@@ -1496,12 +1496,15 @@ _cairo_dwrite_scaled_font_init_glyph_surface (cairo_dwrite_scaled_font_t *scaled
     switch (cairo_font_options_get_hint_style (&scaled_font->base.options)) {
         case CAIRO_HINT_STYLE_DEFAULT:
             grid_fit_mode = DWRITE_GRID_FIT_MODE_DEFAULT;
+            break;
         case CAIRO_HINT_STYLE_NONE:
             grid_fit_mode = DWRITE_GRID_FIT_MODE_DISABLED;
+            break;
         case CAIRO_HINT_STYLE_SLIGHT:
         case CAIRO_HINT_STYLE_MEDIUM:
         case CAIRO_HINT_STYLE_FULL:
             grid_fit_mode = DWRITE_GRID_FIT_MODE_ENABLED;
+            break;
     }
 
     cairo_subpixel_order_t subpixel_order;
