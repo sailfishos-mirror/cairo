@@ -733,7 +733,7 @@ endforeach
 extra_link_args += pthread_link_args
 
 # Atomics are an optional feature in C11. Also need to check that C11 atomics are lock free.
-# Windows can't use C11 atomics as some files are compiled with C++.
+# On Windows we use the Interlocked family of functions
 if host_machine.system() != 'windows'
   if cc.links(files('meson-cc-tests/atomic-ops-c11.c'), name: 'Atomic ops: c11')
     conf.set('HAVE_C11_ATOMIC_PRIMITIVES', 1)
