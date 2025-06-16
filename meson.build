@@ -76,7 +76,7 @@ if cc.get_id() != 'msvc'
   endif
 
   supported_cflags = cc.get_supported_arguments(cflags)
-  add_project_arguments(supported_cflags, language: 'c')
+  add_project_arguments(supported_cflags, language: ['c', 'cpp'])
 
   # We only wish to enable attribute(warn_unused_result) if we can prevent
   # gcc from generating thousands of warnings about the misapplication of the
@@ -95,10 +95,10 @@ if cc.get_id() == 'msvc'
   add_project_arguments('/wd4244', '/wd4146',
                         # Don't warn about double -> float truncation
                         '/wd4305',
-                        language : 'c')
+                        language : ['c', 'cpp'])
 endif
 
-add_project_arguments('-D_GNU_SOURCE', language: 'c')
+add_project_arguments('-D_GNU_SOURCE', language: ['c', 'cpp'])
 
 pkgmod = import('pkgconfig')
 python3 = import('python').find_installation()
