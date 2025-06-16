@@ -98,6 +98,7 @@ if cc.get_id() == 'msvc'
                         # Don't warn about _cairo_status -> _cairo_int_status conversion
                         '/wd5286',
                         language : ['c', 'cpp'])
+  add_project_arguments('-D_CRT_SECURE_NO_WARNINGS', language : ['c', 'cpp'])
 endif
 
 add_project_arguments('-D_GNU_SOURCE', language: ['c', 'cpp'])
