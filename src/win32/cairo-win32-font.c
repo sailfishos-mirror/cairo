@@ -147,7 +147,7 @@ _get_global_font_dc (void)
     static DWORD hdc_tls_index;
     HDC hdc;
 
-    if (!_cairo_atomic_init_once_enter (&once)) {
+    if (_cairo_atomic_init_once_enter (&once)) {
         hdc_tls_index = TlsAlloc ();
         assert (hdc_tls_index != TLS_OUT_OF_INDEXES);
         _cairo_atomic_init_once_leave (&once);
