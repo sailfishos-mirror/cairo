@@ -419,48 +419,6 @@ android arm64 fedora:
     - meson setup --cross-file .gitlab-ci/android-cross-file.txt -Dpixman:a64-neon=disabled build
     - meson compile --verbose -C build
 
-macOS x86 host:
-  tags:
-    - gst-macos-12.3
-  stage: 'build'
-  artifacts:
-    when: 'always'
-    expire_in: "7 days"
-    paths:
-      - build/meson-logs/*.txt
-      - build/meson-private/*.pc
-      - build/test/*.log
-      - build/test/pdiff/*.log
-      - build/test/output
-    exclude:
-      - "build/test/**/*.cs"
-      - "build/test/**/*.trace"
-  before_script:
-    # Install the DejaVu fonts
-    - curl -LO https://downloads.sourceforge.net/dejavu/dejavu-fonts-ttf-2.37.zip
-    - unzip dejavu-fonts-ttf-2.37.zip
-    - cp dejavu-fonts-ttf-2.37/ttf/*.ttf /Library/Fonts
-    # Update pip
-    - pip3 install --upgrade pip
-    # Make sure meson is up to date
-    - pip3 install -U meson
-    # Need to install certificates for Python
-    - pip3 install --upgrade certifi
-    # Anther way to install certificates
-    - open /Applications/Python\ 3.8/Install\ Certificates.command
-    # Get ninja
-    - pip3 install -U ninja
-  script:
-    - CERT_PATH=$(python3 -m certifi) && export SSL_CERT_FILE=${CERT_PATH} && export REQUESTS_CA_BUNDLE=${CERT_PATH}
-    # pixman region-test fails to link on macOS
-    - meson setup -Dpixman:tests=disabled build
-    - meson compile --verbose -C build
-    # Test cairo-quartz. Other backends should be covered by other jobs
-    - export CAIRO_TEST_IGNORE_quartz_argb32=$(tr '\n' ',' < .gitlab-ci/ignore-quartz-argb32.txt)
-    - export CAIRO_TEST_IGNORE_quartz_rgb24=$(tr '\n' ',' < .gitlab-ci/ignore-quartz-rgb24.txt)
-    - export CAIRO_TEST_TARGET=quartz
-    - (cd build/test && srcdir=../../test ./cairo-test-suite)
-
 # Run static analysis.
 static-scan:
   stage: 'analysis'
