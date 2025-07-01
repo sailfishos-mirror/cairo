@@ -155,6 +155,9 @@ fedora image:
     when: "always"
     paths:
       - "*"
+    exclude:
+      - ".git*"
+      - ".git/**/*"
 
 fedora build shared:
   extends:
@@ -397,6 +400,9 @@ vs2019 shared amd64:
   artifacts:
     paths:
       - "*"
+    exclude:
+      - ".git*"
+      - ".git/**/*"
 
 vs2019 static amd64:
   extends: '.build windows'
