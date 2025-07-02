@@ -486,6 +486,8 @@ _cairo_atomic_ptr_cmpxchg_return_old_fallback(cairo_atomic_intptr_t *x, void *ol
 
 #if defined (_WIN32)
 
+#include <windows.h>
+
 typedef INIT_ONCE cairo_atomic_once_t;
 #define CAIRO_ATOMIC_ONCE_INIT INIT_ONCE_STATIC_INIT
 
@@ -507,7 +509,7 @@ _cairo_atomic_init_once_enter(cairo_atomic_once_t *once)
 static cairo_always_inline void
 _cairo_atomic_init_once_leave(cairo_atomic_once_t *once)
 {
-    if (unlikely (InitOnceComplete (once, 0, NULL))) {
+    if (unlikely (!InitOnceComplete (once, 0, NULL))) {
         assert (0 && "InitOnceComplete failed");
     }
 }
