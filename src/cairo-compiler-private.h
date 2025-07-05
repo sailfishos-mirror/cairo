@@ -148,7 +148,7 @@
 #define unlikely(expr) (expr)
 #endif
 
-#if !defined(__GNUC__)
+#if !defined(__GNUC__) && !defined (__clang__)
 #undef __attribute__
 #define __attribute__(x)
 #endif
