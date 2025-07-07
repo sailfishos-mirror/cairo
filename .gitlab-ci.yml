@@ -355,11 +355,18 @@ mingw-64 build:
   variables:
     MESON_ARGS: >
       ${DEFAULT_MESON_ARGS}
+      ${EXTRA_MESON_ARGS}
       -Dfontconfig=enabled
       -Dfreetype=enabled
       -Dglib=enabled
       -Dzlib=enabled
-      ${EXTRA_MESON_ARGS}
+      -Dglib:tests=false
+      -Dglib:sysprof=disabled
+      -Dpixman:tests=disabled
+      -Dpixman:demos=disabled
+      -Dfontconfig:doc=disabled
+      -Dfontconfig:tests=disabled
+      -Dfreetype:tests=disabled
   before_script:
     # Make sure meson is up to date, latest fontconfig requires a newer Meson than what's on the image
     - pip3 install -U meson
