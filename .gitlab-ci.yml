@@ -410,6 +410,7 @@ vs2019 shared amd64:
     exclude:
       - ".git*"
       - ".git/**/*"
+      - 'build/test/srcdir'
 
 vs2019 static amd64:
   extends: '.build windows'
