@@ -285,7 +285,7 @@ test fedora xcb:
     - export CAIRO_TEST_IGNORE_xcb_render_0_0_argb32=$(tr '\n' ',' < .gitlab-ci/ignore-xcb-render-0-0-argb32.txt)
     - export CAIRO_TEST_IGNORE_xcb_render_0_0_rgb24=$(tr '\n' ',' < .gitlab-ci/ignore-xcb-render-0-0-rgb24.txt)
     - export CAIRO_TEST_IGNORE_xcb_fallback_rgb24=$(tr '\n' ',' < .gitlab-ci/ignore-xcb-fallback-rgb24.txt)
-    - export CAIRO_TEST_TARGET="xcb,xcb-window,xcb-window&,xcb-render-0_0,xcb-fallback"
+    - export CAIRO_TEST_TARGET=xcb
     - export srcdir=../../test
     - (cd builddir/test && xvfb-run ./cairo-test-suite)
 
@@ -297,7 +297,7 @@ test fedora xlib:
     - export CAIRO_TEST_IGNORE_xlib_window_rgb24=$(tr '\n' ',' < .gitlab-ci/ignore-xlib-window-rgb24.txt)
     - export CAIRO_TEST_IGNORE_xlib_render_0_0_rgb24=$(tr '\n' ',' < .gitlab-ci/ignore-xlib-render-0-0-rgb24.txt)
     - export CAIRO_TEST_IGNORE_xlib_fallback_rgb24=$(tr '\n' ',' < .gitlab-ci/ignore-xlib-fallback-rgb24.txt)
-    - export CAIRO_TEST_TARGET="xlib,xlib-window,xlib-render-0_0,xlib-fallback"
+    - export CAIRO_TEST_TARGET=xlib
     - export srcdir=../../test
     - (cd builddir/test && xvfb-run ./cairo-test-suite)
 
