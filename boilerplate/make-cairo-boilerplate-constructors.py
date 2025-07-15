@@ -1,5 +1,4 @@
-# IMPORTANT: Keep in sync with make-cairo-boilerplate-constructors.sh
-#            and test/make-cairo-test-constructors.py!
+# IMPORTANT: Keep in sync with test/make-cairo-test-constructors.py!
 import argparse
 import sys
 import re
