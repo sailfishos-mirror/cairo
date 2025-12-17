@@ -593,6 +593,8 @@ _cairo_recording_surface_finish (void *abstract_surface)
 
     _cairo_array_fini (&surface->commands);
 
+    CAIRO_MUTEX_FINI (surface->mutex);
+
     if (surface->bbtree.left)
 	bbtree_del (surface->bbtree.left);
     if (surface->bbtree.right)
