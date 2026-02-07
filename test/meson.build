@@ -294,6 +294,7 @@ test_sources = [
   'record-transform-paint.c',
   'record-write-png.c',
   'recording-ink-extents.c',
+  'recording-ink-extents-overflow.c',
   'recording-surface-pattern.c',
   'recording-surface-extend.c',
   'rectangle-rounding-error.c',
