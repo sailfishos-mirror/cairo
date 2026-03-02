@@ -155,6 +155,9 @@ fedora image:
     when: "always"
     paths:
       - "*"
+    exclude:
+      - ".git*"
+      - ".git/**/*"
 
 fedora build shared:
   extends:
@@ -352,11 +355,18 @@ mingw-64 build:
   variables:
     MESON_ARGS: >
       ${DEFAULT_MESON_ARGS}
+      ${EXTRA_MESON_ARGS}
       -Dfontconfig=enabled
       -Dfreetype=enabled
       -Dglib=enabled
       -Dzlib=enabled
-      ${EXTRA_MESON_ARGS}
+      -Dglib:tests=false
+      -Dglib:sysprof=disabled
+      -Dpixman:tests=disabled
+      -Dpixman:demos=disabled
+      -Dfontconfig:doc=disabled
+      -Dfontconfig:tests=disabled
+      -Dfreetype:tests=disabled
   before_script:
     # Make sure meson is up to date, latest fontconfig requires a newer Meson than what's on the image
     - pip3 install -U meson
@@ -373,14 +383,16 @@ mingw-64 build:
     # For some reason, options are separated by newline instead of space, so we
     # have to replace them first.
     - $env:MESON_ARGS = $env:MESON_ARGS.replace("`n"," ")
-    
+
     # Gitlab executes PowerShell in docker, but VsDevCmd.bat is a batch script.
     # Environment variables substitutions is done by PowerShell before calling
     # cmd.exe, that's why we use $env:FOO instead of %FOO%
     - cmd.exe /C "C:\BuildTools\Common7\Tools\VsDevCmd.bat -host_arch=amd64 -arch=$env:ARCH &&
         meson subprojects update --reset &&
-        meson build $env:MESON_ARGS &&
-        ninja -C build"
+        meson setup build --prefix `"$pwd\bundle`" $env:MESON_ARGS &&
+        meson compile -C build &&
+        meson install -C build"
+
   artifacts:
     expire_in: "7 days"
     when: "always"
@@ -392,6 +404,13 @@ vs2019 shared amd64:
   variables:
     ARCH: 'amd64'
     EXTRA_MESON_ARGS: '--default-library=shared'
+  artifacts:
+    paths:
+      - "*"
+    exclude:
+      - ".git*"
+      - ".git/**/*"
+      - 'build/test/srcdir'
 
 vs2019 static amd64:
   extends: '.build windows'
@@ -404,6 +423,68 @@ vs2019 shared x86:
   variables:
     ARCH: 'x86'
     EXTRA_MESON_ARGS: '--default-library=shared'
+
+.test vs2019:
+  dependencies:
+    - 'vs2019 shared amd64'
+  needs:
+    - 'vs2019 shared amd64'
+  extends:
+    - '.build windows'
+  stage: 'test'
+  artifacts:
+    when: 'always'
+    expire_in: "7 days"
+    paths:
+      - build/meson-logs/*
+      - build/test/*.log
+      - build/test/pdiff/*.log
+      - build/test/output
+    exclude:
+      - "build/test/**/*.cs"
+      - "build/test/**/*.trace"
+
+test vs2019 win32:
+  extends: '.test vs2019'
+  script:
+    - $ErrorActionPreference = "Stop"
+
+    - $env:PATH = "$pwd\bundle\bin;" + $env:PATH
+
+    - $env:CAIRO_TEST_TARGET = "win32"
+
+    - $lines = (Get-Content .gitlab-ci\ignore-win32-dib-rgb24.txt)
+    - $env:CAIRO_TEST_IGNORE_win32_DIB_rgb24 = [string]::Join(',', $lines)
+    - $lines = (Get-Content .gitlab-ci\ignore-win32-dib-argb32.txt)
+    - $env:CAIRO_TEST_IGNORE_win32_DIB_argb32 = [string]::Join(',', $lines)
+    - $lines = (Get-Content .gitlab-ci\ignore-win32-ddb-rgb24.txt)
+    - $env:CAIRO_TEST_IGNORE_win32_DDB_rgb24 = [string]::Join(',', $lines)
+    - $lines = (Get-Content .gitlab-ci\ignore-win32-ddb-argb32.txt)
+    - $env:CAIRO_TEST_IGNORE_win32_DDB_argb32 = [string]::Join(',', $lines)
+
+    # This job may run on a different runner than the previous
+    # build step, and different runners have different working
+    # directories. For example:
+    # - C:/Users/Administrator/runner/builds
+    # - C:/gitlab-runner/builds
+    # So the <builddir>\test\srcdir link may point to nowhere.
+    # As a workaround, set the "srcdir" environment variable.
+    - $env:srcdir = "$pwd\test"
+
+    - cmd /C "C:\BuildTools\Common7\Tools\VsDevCmd.bat -host_arch=amd64 -arch=amd64 &&
+        cd build\test &&
+        cairo-test-suite"
+  artifacts:
+    when: 'always'
+    expire_in: "7 days"
+    paths:
+      - build/meson-logs/*
+      - build/test/*.log
+      - build/test/pdiff/*.log
+      - build/test/output
+    exclude:
+      - "build/test/**/*.cs"
+      - "build/test/**/*.trace"
 
 android arm64 fedora:
   # TODO: should probably build our own image here some day
