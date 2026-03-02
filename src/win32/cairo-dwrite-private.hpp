@@ -36,24 +36,8 @@
 
 #include "cairoint.h"
 #include "cairo-win32-refptr.hpp"
-#include <dwrite_3.h>
-#include <d2d1.h>
-
-#ifdef __MINGW32__
-#include "dw-extra.h"
-#else
-typedef DWRITE_COLOR_GLYPH_RUN1 DWRITE_COLOR_GLYPH_RUN1_WORKAROUND;
-#endif
-
-/* If d2d1_3.h header required for color fonts is not available,
- * include our own version containing just the functions we need.
- */
-
-#if HAVE_D2D1_3_H
-#include <d2d1_3.h>
-#else
-#include "d2d1-extra.h"
-#endif
+#include "dwrite-extra.hpp"
+#include "d2d1-extra.hpp"
 
 // DirectWrite is not available on all platforms.
 typedef HRESULT (WINAPI*DWriteCreateFactoryFunc)(
@@ -141,6 +125,16 @@ public:
 	return mFactoryInstance4;
     }
 
+    static RefPtr<IDWriteFactory8> Instance8()
+    {
+        if (!mFactoryInstance8) {
+            if (Instance()) {
+                Instance()->QueryInterface(&mFactoryInstance8);
+            }
+        }
+        return mFactoryInstance8;
+    }
+
     static RefPtr<IDWriteFontCollection> SystemCollection()
     {
 	if (!mSystemCollection) {
@@ -185,6 +179,7 @@ private:
     static RefPtr<IDWriteFactory2> mFactoryInstance2;
     static RefPtr<IDWriteFactory3> mFactoryInstance3;
     static RefPtr<IDWriteFactory4> mFactoryInstance4;
+    static RefPtr<IDWriteFactory8> mFactoryInstance8;
     static RefPtr<IDWriteFontCollection> mSystemCollection;
     static RefPtr<IDWriteRenderingParams> mDefaultRenderingParams;
 };

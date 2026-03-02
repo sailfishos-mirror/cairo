@@ -219,6 +219,7 @@ RefPtr<IDWriteFactory1> DWriteFactory::mFactoryInstance1;
 RefPtr<IDWriteFactory2> DWriteFactory::mFactoryInstance2;
 RefPtr<IDWriteFactory3> DWriteFactory::mFactoryInstance3;
 RefPtr<IDWriteFactory4> DWriteFactory::mFactoryInstance4;
+RefPtr<IDWriteFactory8> DWriteFactory::mFactoryInstance8;
 
 RefPtr<IWICImagingFactory> WICImagingFactory::mFactoryInstance;
 RefPtr<IDWriteFontCollection> DWriteFactory::mSystemCollection;
@@ -1140,13 +1141,16 @@ _cairo_dwrite_scaled_font_init_glyph_color_surface(cairo_dwrite_scaled_font_t *s
     matrix = _cairo_dwrite_matrix_from_matrix(&scaled_font->mat);
 
     /* The list of glyph image formats this renderer is prepared to support. */
-    DWRITE_GLYPH_IMAGE_FORMATS supported_formats = static_cast<DWRITE_GLYPH_IMAGE_FORMATS>(
-        DWRITE_GLYPH_IMAGE_FORMATS_COLR |
-        DWRITE_GLYPH_IMAGE_FORMATS_SVG |
-        DWRITE_GLYPH_IMAGE_FORMATS_PNG |
-        DWRITE_GLYPH_IMAGE_FORMATS_JPEG |
-        DWRITE_GLYPH_IMAGE_FORMATS_TIFF |
-        DWRITE_GLYPH_IMAGE_FORMATS_PREMULTIPLIED_B8G8R8A8);
+    const DWRITE_GLYPH_IMAGE_FORMATS_ base_formats = (
+        DWRITE_GLYPH_IMAGE_FORMATS_COLR_ |
+        DWRITE_GLYPH_IMAGE_FORMATS_SVG_ |
+        DWRITE_GLYPH_IMAGE_FORMATS_PNG_ |
+        DWRITE_GLYPH_IMAGE_FORMATS_JPEG_ |
+        DWRITE_GLYPH_IMAGE_FORMATS_TIFF_ |
+        DWRITE_GLYPH_IMAGE_FORMATS_PREMULTIPLIED_B8G8R8A8_);
+
+    // Level of support for DWRITE_GLYPH_IMAGE_FORMATS_COLR_PAINT_TREE
+    DWRITE_PAINT_FEATURE_LEVEL dwrite_paint_feature_level = DWRITE_PAINT_FEATURE_LEVEL_COLR_V1;
 
     RefPtr<IDWriteFontFace2> fontFace2;
     UINT32 palette_count = 0;
@@ -1157,15 +1161,35 @@ _cairo_dwrite_scaled_font_init_glyph_color_surface(cairo_dwrite_scaled_font_t *s
     if (scaled_font->base.options.palette_index < palette_count)
 	palette_index = scaled_font->base.options.palette_index;
 
-    hr = DWriteFactory::Instance4()->TranslateColorGlyphRun(
-	origin,
-	&run,
-	NULL, /* glyphRunDescription */
-	supported_formats,
-	dwrite_font_face->measuring_mode,
-	&matrix,
-	palette_index,
-	&run_enumerator);
+    if (DWriteFactory::Instance8().get()) {
+        hr = DWriteFactory::Instance8()->TranslateColorGlyphRun(
+            origin,
+            &run,
+            NULL, /* glyphRunDescription */
+            static_cast<DWRITE_GLYPH_IMAGE_FORMATS>
+            (base_formats | DWRITE_GLYPH_IMAGE_FORMATS_COLR_PAINT_TREE_),
+            dwrite_paint_feature_level,
+            dwrite_font_face->measuring_mode,
+            &matrix,
+            palette_index,
+            &run_enumerator);
+    }
+    else if (DWriteFactory::Instance4().get()) {
+        hr = DWriteFactory::Instance4()->TranslateColorGlyphRun(
+            origin,
+            &run,
+            NULL, /* glyphRunDescription */
+            static_cast<DWRITE_GLYPH_IMAGE_FORMATS>
+            (base_formats),
+            dwrite_font_face->measuring_mode,
+            &matrix,
+            palette_index,
+            &run_enumerator);
+    }
+    else {
+        // TODO
+        return CAIRO_INT_STATUS_UNSUPPORTED;
+    }
 
     if (hr == DWRITE_E_NOCOLOR) {
 	/* No color glyphs */
@@ -1242,11 +1266,12 @@ _cairo_dwrite_scaled_font_init_glyph_color_surface(cairo_dwrite_scaled_font_t *s
 	if (FAILED(hr))
 	    return _cairo_dwrite_error (hr, "GetCurrentRun failed");
 
-	switch (color_run->glyphImageFormat) {
-	    case DWRITE_GLYPH_IMAGE_FORMATS_PNG:
-	    case DWRITE_GLYPH_IMAGE_FORMATS_JPEG:
-	    case DWRITE_GLYPH_IMAGE_FORMATS_TIFF:
-	    case DWRITE_GLYPH_IMAGE_FORMATS_PREMULTIPLIED_B8G8R8A8:
+        const auto format = static_cast<DWRITE_GLYPH_IMAGE_FORMATS_>(color_run->glyphImageFormat);
+	switch (format) {
+	    case DWRITE_GLYPH_IMAGE_FORMATS_PNG_:
+	    case DWRITE_GLYPH_IMAGE_FORMATS_JPEG_:
+	    case DWRITE_GLYPH_IMAGE_FORMATS_TIFF_:
+	    case DWRITE_GLYPH_IMAGE_FORMATS_PREMULTIPLIED_B8G8R8A8_:
 		/* Bitmap glyphs */
 		dc4->DrawColorBitmapGlyphRun(color_run->glyphImageFormat,
 					     origin,
@@ -1255,7 +1280,7 @@ _cairo_dwrite_scaled_font_init_glyph_color_surface(cairo_dwrite_scaled_font_t *s
 					     D2D1_COLOR_BITMAP_GLYPH_SNAP_OPTION_DEFAULT);
 		break;
 
-	    case DWRITE_GLYPH_IMAGE_FORMATS_SVG:
+	    case DWRITE_GLYPH_IMAGE_FORMATS_SVG_:
 		/* SVG glyphs */
 		dc4->DrawSvgGlyphRun(origin,
 				     &color_run->glyphRun,
@@ -1265,9 +1290,9 @@ _cairo_dwrite_scaled_font_init_glyph_color_surface(cairo_dwrite_scaled_font_t *s
 				     dwrite_font_face->measuring_mode);
 		uses_foreground_color = TRUE;
 		break;
-	    case DWRITE_GLYPH_IMAGE_FORMATS_TRUETYPE:
-	    case DWRITE_GLYPH_IMAGE_FORMATS_CFF:
-	    case DWRITE_GLYPH_IMAGE_FORMATS_COLR:
+	    case DWRITE_GLYPH_IMAGE_FORMATS_TRUETYPE_:
+	    case DWRITE_GLYPH_IMAGE_FORMATS_CFF_:
+	    case DWRITE_GLYPH_IMAGE_FORMATS_COLR_:
 		/* Outline glyphs */
 		if (color_run->paletteIndex == 0xFFFF) {
 		    D2D1_COLOR_F color = foreground_color_brush->GetColor();
@@ -1291,7 +1316,21 @@ _cairo_dwrite_scaled_font_init_glyph_color_surface(cairo_dwrite_scaled_font_t *s
 				  color_run->glyphRunDescription,
 				  color_brush,
 				  dwrite_font_face->measuring_mode);
-	    case DWRITE_GLYPH_IMAGE_FORMATS_NONE:
+                break;
+            case DWRITE_GLYPH_IMAGE_FORMATS_COLR_PAINT_TREE_:
+            {
+                RefPtr<ID2D1DeviceContext7> dc7;
+                hr = rt->QueryInterface(&dc7);
+                if (FAILED(hr))
+                    return _cairo_dwrite_error (hr, "QueryInterface(&dc7) failed");
+                dc7->DrawPaintGlyphRun (origin,
+                                        &color_run->glyphRun,
+                                        foreground_color_brush,
+                                        palette_index,
+                                        dwrite_font_face->measuring_mode);
+                break;
+            }
+	    case DWRITE_GLYPH_IMAGE_FORMATS_NONE_:
 		break;
 	}
     }
@@ -1374,10 +1413,6 @@ init_glyph_surface_fallback_a8 (cairo_dwrite_scaled_font_t  *scaled_font,
     cairo_surface_t *surface = cairo_image_surface_create (CAIRO_FORMAT_A8, width, height);
     if (cairo_surface_status (surface))
         return CAIRO_INT_STATUS_UNSUPPORTED;
-
-    // Tell pixman that it should use component alpha blending when the surface is
-    // used as a source
-    pixman_image_set_component_alpha (((cairo_image_surface_t*)surface)->pixman_image, TRUE);
 
     int stride = cairo_image_surface_get_stride (surface);
     WICRect rect = { 0, 0, width, height };
@@ -1526,7 +1561,7 @@ _cairo_dwrite_scaled_font_init_glyph_surface (cairo_dwrite_scaled_font_t *scaled
 
     if (subpixel_order_is_vertical) {
         // DirectWrite does not support vertical pixel geometries.
-        // As a workaround, apply a simmetry which swaps x and y
+        // As a workaround, apply a symmetry which swaps x and y
         // coordinates, then re-swap while copying the back into
         // the image surface
 
