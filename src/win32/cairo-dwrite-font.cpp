@@ -156,19 +156,8 @@ public:
 	return mFactoryInstance;
     }
 
-    static RefPtr<IDWriteFactory4> Instance4()
-    {
-	if (!mFactoryInstance4) {
-	    if (Instance()) {
-		Instance()->QueryInterface(&mFactoryInstance4);
-	    }
-	}
-	return mFactoryInstance4;
-    }
-
 private:
     static RefPtr<ID2D1Factory> mFactoryInstance;
-    static RefPtr<IDWriteFactory4> mFactoryInstance4;
 };
 
 class WICImagingFactory
