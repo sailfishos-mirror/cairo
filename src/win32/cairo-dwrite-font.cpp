@@ -178,7 +178,7 @@ private:
     static RefPtr<IWICImagingFactory> mFactoryInstance;
 };
 
-
+cairo_atomic_once_t DWriteFactory::mOnceFactories = CAIRO_ATOMIC_ONCE_INIT;
 RefPtr<IDWriteFactory> DWriteFactory::mFactoryInstance;
 RefPtr<IDWriteFactory1> DWriteFactory::mFactoryInstance1;
 RefPtr<IDWriteFactory2> DWriteFactory::mFactoryInstance2;
@@ -187,8 +187,9 @@ RefPtr<IDWriteFactory4> DWriteFactory::mFactoryInstance4;
 RefPtr<IDWriteFactory8> DWriteFactory::mFactoryInstance8;
 
 RefPtr<IWICImagingFactory> WICImagingFactory::mFactoryInstance;
+
+cairo_atomic_once_t DWriteFactory::mOnceSystemCollection = CAIRO_ATOMIC_ONCE_INIT;
 RefPtr<IDWriteFontCollection> DWriteFactory::mSystemCollection;
-RefPtr<IDWriteRenderingParams> DWriteFactory::mDefaultRenderingParams;
 
 RefPtr<ID2D1Factory> D2DFactory::mFactoryInstance;
 
@@ -197,8 +198,15 @@ _create_rendering_params(IDWriteRenderingParams     *params,
 			 const cairo_font_options_t *options,
 			 cairo_antialias_t           antialias)
 {
-    if (!params)
-	params = DWriteFactory::DefaultRenderingParams();
+    RefPtr<IDWriteRenderingParams> default_rendering_params;
+    HRESULT hr;
+
+    if (!params) {
+        hr = DWriteFactory::Instance()->CreateRenderingParams(&default_rendering_params);
+        assert(SUCCEEDED(hr));
+        params = default_rendering_params.get();
+    }
+
     FLOAT gamma = params->GetGamma();
     FLOAT enhanced_contrast = params->GetEnhancedContrast();
     FLOAT clear_type_level = params->GetClearTypeLevel();
@@ -243,7 +251,6 @@ _create_rendering_params(IDWriteRenderingParams     *params,
     if (!modified)
 	return params;
 
-    HRESULT hr;
     RefPtr<IDWriteRenderingParams1> params1;
     hr = params->QueryInterface(&params1);
     if (FAILED(hr)) {

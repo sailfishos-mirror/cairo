@@ -39,13 +39,6 @@
 #include "dwrite-extra.hpp"
 #include "d2d1-extra.hpp"
 
-// DirectWrite is not available on all platforms.
-typedef HRESULT (WINAPI*DWriteCreateFactoryFunc)(
-  DWRITE_FACTORY_TYPE factoryType,
-  REFIID iid,
-  IUnknown **factory
-);
-
 /* #cairo_scaled_font_t implementation */
 struct _cairo_dwrite_scaled_font {
     cairo_scaled_font_t base;
@@ -63,96 +56,61 @@ class DWriteFactory
 public:
     static RefPtr<IDWriteFactory> Instance()
     {
-	if (!mFactoryInstance) {
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-function-type"
-#endif
-            HMODULE dwrite = _cairo_win32_load_library_from_system32 (L"dwrite.dll");
-	    DWriteCreateFactoryFunc createDWriteFactory = (DWriteCreateFactoryFunc)
-                GetProcAddress(dwrite, "DWriteCreateFactory");
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
-	    if (createDWriteFactory) {
-		HRESULT hr = createDWriteFactory(
-		    DWRITE_FACTORY_TYPE_SHARED,
-		    __uuidof(IDWriteFactory),
-		    reinterpret_cast<IUnknown**>(&mFactoryInstance));
-		assert(SUCCEEDED(hr));
-	    }
-	}
-	return mFactoryInstance;
+        InitializeFactories();
+        return mFactoryInstance;
     }
 
     static RefPtr<IDWriteFactory1> Instance1()
     {
-	if (!mFactoryInstance1) {
-	    if (Instance()) {
-		Instance()->QueryInterface(&mFactoryInstance1);
-	    }
-	}
-	return mFactoryInstance1;
+        InitializeFactories();
+        return mFactoryInstance1;
     }
 
     static RefPtr<IDWriteFactory2> Instance2()
     {
-	if (!mFactoryInstance2) {
-	    if (Instance()) {
-		Instance()->QueryInterface(&mFactoryInstance2);
-	    }
-	}
-	return mFactoryInstance2;
+        InitializeFactories();
+        return mFactoryInstance2;
     }
 
     static RefPtr<IDWriteFactory3> Instance3()
     {
-	if (!mFactoryInstance3) {
-	    if (Instance()) {
-		Instance()->QueryInterface(&mFactoryInstance3);
-	    }
-	}
-	return mFactoryInstance3;
+        InitializeFactories();
+        return mFactoryInstance3;
     }
 
     static RefPtr<IDWriteFactory4> Instance4()
     {
-	if (!mFactoryInstance4) {
-	    if (Instance()) {
-		Instance()->QueryInterface(&mFactoryInstance4);
-	    }
-	}
-	return mFactoryInstance4;
+        InitializeFactories();
+        return mFactoryInstance4;
     }
 
     static RefPtr<IDWriteFactory8> Instance8()
     {
-        if (!mFactoryInstance8) {
-            if (Instance()) {
-                Instance()->QueryInterface(&mFactoryInstance8);
-            }
-        }
+        InitializeFactories();
         return mFactoryInstance8;
     }
 
     static RefPtr<IDWriteFontCollection> SystemCollection()
     {
-	if (!mSystemCollection) {
-	    if (Instance()) {
-		HRESULT hr = Instance()->GetSystemFontCollection(&mSystemCollection);
-		assert(SUCCEEDED(hr));
-	    }
-	}
-	return mSystemCollection;
+        /* The system font collection obtained from the shared factory
+         * is a singleton object. This means that we can cache it
+         * globally and use from any thread.
+         */
+
+        if (_cairo_atomic_init_once_enter (&mOnceSystemCollection)) {
+            HRESULT hr = Instance()->GetSystemFontCollection(&mSystemCollection);
+            assert(SUCCEEDED(hr));
+
+            _cairo_atomic_init_once_leave (&mOnceSystemCollection);
+        }
+        return mSystemCollection;
     }
 
     static RefPtr<IDWriteFontFamily> FindSystemFontFamily(const WCHAR *aFamilyName)
     {
 	UINT32 idx;
 	BOOL found;
-	if (!SystemCollection()) {
-	    return NULL;
-	}
+
 	SystemCollection()->FindFamilyName(aFamilyName, &idx, &found);
 	if (!found) {
 	    return NULL;
@@ -163,25 +121,62 @@ public:
 	return family;
     }
 
-    static RefPtr<IDWriteRenderingParams> DefaultRenderingParams()
+private:
+    static void InitializeFactories()
     {
-	if (!mDefaultRenderingParams) {
-	    if (Instance()) {
-		Instance()->CreateRenderingParams(&mDefaultRenderingParams);
-	    }
-	}
-	return mDefaultRenderingParams;
+        /* The shared IDWriteFactory is a singleton object (every call to
+         * DWriteCreateFactory returns the same object) and thus is safe
+         * for concurrent access.
+         */
+
+        if (_cairo_atomic_init_once_enter (&mOnceFactories)) {
+            typedef HRESULT
+            (WINAPI *pDWriteCreateFactory_t) (DWRITE_FACTORY_TYPE factoryType,
+                                              REFIID iid,
+                                              IUnknown **factory);
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
+#endif
+            HMODULE dwrite = _cairo_win32_load_library_from_system32 (L"dwrite.dll");
+            pDWriteCreateFactory_t pDWriteCreateFactory = (pDWriteCreateFactory_t)
+                GetProcAddress (dwrite, "DWriteCreateFactory");
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
+            /* DWrite is based on nano-COM, which is COM as binary interface
+             * and call convention, but doesn't need the runtime library or
+             * registered informations. There's no need to enter a COM
+             * apartment here.
+             */
+            HRESULT hr = pDWriteCreateFactory (DWRITE_FACTORY_TYPE_SHARED,
+                                               __uuidof (IDWriteFactory),
+                                               reinterpret_cast<IUnknown**>(&mFactoryInstance));
+            assert(SUCCEEDED(hr));
+
+            mFactoryInstance->QueryInterface(&mFactoryInstance1);
+            mFactoryInstance->QueryInterface(&mFactoryInstance2);
+            mFactoryInstance->QueryInterface(&mFactoryInstance3);
+            mFactoryInstance->QueryInterface(&mFactoryInstance4);
+            mFactoryInstance->QueryInterface(&mFactoryInstance8);
+
+            _cairo_atomic_init_once_leave (&mOnceFactories);
+        }
     }
 
 private:
+    static cairo_atomic_once_t mOnceFactories;
     static RefPtr<IDWriteFactory> mFactoryInstance;
     static RefPtr<IDWriteFactory1> mFactoryInstance1;
     static RefPtr<IDWriteFactory2> mFactoryInstance2;
     static RefPtr<IDWriteFactory3> mFactoryInstance3;
     static RefPtr<IDWriteFactory4> mFactoryInstance4;
     static RefPtr<IDWriteFactory8> mFactoryInstance8;
+
+    static cairo_atomic_once_t mOnceSystemCollection;
     static RefPtr<IDWriteFontCollection> mSystemCollection;
-    static RefPtr<IDWriteRenderingParams> mDefaultRenderingParams;
 };
 
 class AutoDWriteGlyphRun : public DWRITE_GLYPH_RUN
