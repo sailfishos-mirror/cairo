@@ -166,33 +166,9 @@ public:
 	return mFactoryInstance4;
     }
 
-    static RefPtr<ID2D1DCRenderTarget> RenderTarget()
-    {
-	if (!mRenderTarget) {
-	    if (!Instance()) {
-		return NULL;
-	    }
-	    // Create a DC render target.
-	    D2D1_RENDER_TARGET_PROPERTIES props = D2D1::RenderTargetProperties(
-		D2D1_RENDER_TARGET_TYPE_DEFAULT,
-		D2D1::PixelFormat(
-		    DXGI_FORMAT_B8G8R8A8_UNORM,
-		    D2D1_ALPHA_MODE_PREMULTIPLIED),
-		0,
-		0,
-		D2D1_RENDER_TARGET_USAGE_NONE,
-		D2D1_FEATURE_LEVEL_DEFAULT
-		);
-
-	    Instance()->CreateDCRenderTarget(&props, &mRenderTarget);
-	}
-	return mRenderTarget;
-    }
-
 private:
     static RefPtr<ID2D1Factory> mFactoryInstance;
     static RefPtr<IDWriteFactory4> mFactoryInstance4;
-    static RefPtr<ID2D1DCRenderTarget> mRenderTarget;
 };
 
 class WICImagingFactory
@@ -226,7 +202,6 @@ RefPtr<IDWriteFontCollection> DWriteFactory::mSystemCollection;
 RefPtr<IDWriteRenderingParams> DWriteFactory::mDefaultRenderingParams;
 
 RefPtr<ID2D1Factory> D2DFactory::mFactoryInstance;
-RefPtr<ID2D1DCRenderTarget> D2DFactory::mRenderTarget;
 
 static RefPtr<IDWriteRenderingParams>
 _create_rendering_params(IDWriteRenderingParams     *params,
@@ -2197,52 +2172,6 @@ _dwrite_draw_glyphs_to_gdi_surface_gdi(cairo_win32_surface_t *surface,
     return CAIRO_INT_STATUS_SUCCESS;
 }
 
-cairo_int_status_t
-_dwrite_draw_glyphs_to_gdi_surface_d2d(cairo_win32_surface_t *surface,
-				       DWRITE_MATRIX *transform,
-				       DWRITE_GLYPH_RUN *run,
-				       COLORREF color,
-				       const RECT &area)
-{
-    HRESULT hr;
-
-    RefPtr<ID2D1DCRenderTarget> rt = D2DFactory::RenderTarget();
-
-    // XXX don't we need to set RenderingParams on this RenderTarget?
-
-    hr = rt->BindDC(surface->dc, &area);
-    if (FAILED(hr))
-	return CAIRO_INT_STATUS_UNSUPPORTED;
-
-    // D2D uses 0x00RRGGBB not 0x00BBGGRR like COLORREF.
-    color = (color & 0xFF) << 16 |
-	(color & 0xFF00) |
-	(color & 0xFF0000) >> 16;
-    RefPtr<ID2D1SolidColorBrush> brush;
-    hr = rt->CreateSolidColorBrush(D2D1::ColorF(color, 1.0), &brush);
-    if (FAILED(hr))
-	return CAIRO_INT_STATUS_UNSUPPORTED;
-
-    if (transform) {
-	rt->SetTransform(D2D1::Matrix3x2F(transform->m11,
-					  transform->m12,
-					  transform->m21,
-					  transform->m22,
-					  transform->dx,
-					  transform->dy));
-    }
-    rt->BeginDraw();
-    rt->DrawGlyphRun(D2D1::Point2F(0, 0), run, brush);
-    hr = rt->EndDraw();
-    if (transform) {
-	rt->SetTransform(D2D1::Matrix3x2F::Identity());
-    }
-    if (FAILED(hr))
-	return CAIRO_INT_STATUS_UNSUPPORTED;
-
-    return CAIRO_INT_STATUS_SUCCESS;
-}
-
 /* Surface helper function */
 cairo_int_status_t
 _cairo_dwrite_show_glyphs_on_surface(void			*surface,
@@ -2316,25 +2245,7 @@ _cairo_dwrite_show_glyphs_on_surface(void			*surface,
     RECT copyArea, dstArea = { 0, 0, dst->extents.width, dst->extents.height };
     IntersectRect(&copyArea, &fontArea, &dstArea);
 
-#ifdef CAIRO_TRY_D2D_TO_GDI
-    status = _dwrite_draw_glyphs_to_gdi_surface_d2d(dst,
-						    mat,
-						    &run,
-						    color,
-						    copyArea);
-
-    if (status == (cairo_status_t)CAIRO_INT_STATUS_UNSUPPORTED) {
-#endif
-	status = _dwrite_draw_glyphs_to_gdi_surface_gdi(dst,
-							mat,
-							&run,
-							color,
-							dwritesf,
-							copyArea);
-
-#ifdef CAIRO_TRY_D2D_TO_GDI
-    }
-#endif
+    status = _dwrite_draw_glyphs_to_gdi_surface_gdi(dst, mat, &run, color, dwritesf, copyArea);
 
     return status;
 }
