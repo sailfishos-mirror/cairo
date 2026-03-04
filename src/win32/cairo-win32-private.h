@@ -36,13 +36,15 @@
 #ifndef CAIRO_WIN32_PRIVATE_H
 #define CAIRO_WIN32_PRIVATE_H
 
-#include "cairo-win32.h"
-
 #include "cairoint.h"
 
 #include "cairo-device-private.h"
 #include "cairo-surface-clipper-private.h"
 #include "cairo-surface-private.h"
+
+#include "cairo-win32.h"
+
+#include <windows.h>
 
 #define WIN32_FONT_LOGICAL_SCALE 32
 
@@ -236,7 +238,15 @@ cairo_win32_get_system_text_quality (void);
 HMODULE
 _cairo_win32_load_library_from_system32 (const wchar_t *name);
 
+typedef DWORD (__stdcall *stdcall_free_func_t) (void *);
+
+void
+cairo_win32_async_stdcall_free (stdcall_free_func_t func, void *data);
+
 typedef struct {
+    HDC hdc;
+    cairo_bool_t free_hdc;
+
     cairo_bool_t added_to_list;
 } cairo_win32_thread_data_t;
 

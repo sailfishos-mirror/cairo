@@ -97,6 +97,16 @@ thread_data_free (cairo_win32_thread_data_t *data)
 {
     /* Loader-lock-safe */
 
+    if (data->free_hdc) {
+        /* Delete the HDC explicitly only if it was created via a non-NULL
+         * reference HDC. Otherwise the system deletes it automatically on
+         * thread-exit and our asynchronous delete would be racy. For more
+         * informations, refer to the MSDN docs for CreateCompatibleDC.
+         */
+        void *free_func = DeleteDC;
+        cairo_win32_async_stdcall_free (free_func, data->hdc);
+    }
+
 #ifdef USE_EXPLICIT_TLS
     thread_data_allocation_free (data);
 #endif

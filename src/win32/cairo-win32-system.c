@@ -109,6 +109,12 @@ _cairo_win32_load_library_from_system32 (const wchar_t *name)
     return module_handle;
 }
 
+void
+cairo_win32_async_stdcall_free (stdcall_free_func_t func, void *data)
+{
+    QueueUserWorkItem (func, data, WT_EXECUTEDEFAULT);
+}
+
 static void
 cairo_win32_initialize (void)
 {

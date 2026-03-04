@@ -143,19 +143,13 @@ _cairo_win32_scaled_font_init_glyph_path (cairo_win32_scaled_font_t *scaled_font
 static HDC
 _get_global_font_dc (void)
 {
-    static cairo_atomic_once_t once = CAIRO_ATOMIC_ONCE_INIT;
-    static DWORD hdc_tls_index;
-    HDC hdc;
+    cairo_win32_thread_data_t *data = cairo_win32_thread_data_get ();
 
-    if (_cairo_atomic_init_once_enter (&once)) {
-        hdc_tls_index = TlsAlloc ();
-        assert (hdc_tls_index != TLS_OUT_OF_INDEXES);
-        _cairo_atomic_init_once_leave (&once);
-    }
+    if (!data->hdc) {
+        HDC hdc_screen = GetDC (NULL);
+        HDC hdc;
 
-    hdc = TlsGetValue (hdc_tls_index);
-    if (!hdc) {
-	hdc = CreateCompatibleDC (NULL);
+	hdc = CreateCompatibleDC (hdc_screen);
 	if (!hdc) {
             fprintf (stderr, "%s:%s\n", __FUNCTION__, "CreateCompatibleDC");
 	    return NULL;
@@ -167,13 +161,19 @@ _get_global_font_dc (void)
 	    return NULL;
 	}
 
-	if (!TlsSetValue (hdc_tls_index, hdc)) {
-	    DeleteDC (hdc);
-	    return NULL;
-	}
+        data->hdc = hdc;
+        /* From MSDN docs for CreateCompatibleDC:
+         *
+         * If [the reference] hdc is NULL, the thread that calls CreateCompatibleDC
+         * owns the HDC that is created. When this thread is destroyed, the HDC is
+         * no longer valid.
+         */
+        data->free_hdc = (hdc_screen != NULL);
+
+        ReleaseDC (NULL, hdc_screen);
     }
 
-    return hdc;
+    return data->hdc;
 }
 
 static cairo_status_t
