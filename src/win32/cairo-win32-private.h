@@ -236,6 +236,22 @@ cairo_win32_get_system_text_quality (void);
 HMODULE
 _cairo_win32_load_library_from_system32 (const wchar_t *name);
 
+typedef struct {
+    cairo_bool_t added_to_list;
+} cairo_win32_thread_data_t;
+
+void
+cairo_win32_thread_data_initialize (void);
+
+void
+cairo_win32_thread_data_finalize (void);
+
+cairo_win32_thread_data_t *
+cairo_win32_thread_data_get (void);
+
+void
+cairo_win32_thread_data_free (void);
+
 #if CAIRO_HAS_DWRITE_FONT
 
 cairo_int_status_t

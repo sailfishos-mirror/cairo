@@ -46,6 +46,8 @@
 
 #include "cairoint.h"
 
+#include "cairo-win32-private.h"
+
 #include <windows.h>
 
 /**
@@ -107,20 +109,36 @@ _cairo_win32_load_library_from_system32 (const wchar_t *name)
     return module_handle;
 }
 
-#if CAIRO_MUTEX_IMPL_WIN32
+static void
+cairo_win32_initialize (void)
+{
+    CAIRO_MUTEX_INITIALIZE ();
+    cairo_win32_thread_data_initialize ();
+}
+
+static void
+cairo_win32_finalize (void)
+{
+    cairo_win32_thread_data_finalize ();
+    CAIRO_MUTEX_FINALIZE ();
+}
 
 static void NTAPI
 cairo_win32_tls_callback (PVOID hinstance, DWORD dwReason, PVOID lpvReserved)
 {
     switch (dwReason) {
         case DLL_PROCESS_ATTACH:
-            CAIRO_MUTEX_INITIALIZE ();
+            cairo_win32_initialize ();
+            break;
+
+        case DLL_THREAD_DETACH:
+            cairo_win32_thread_data_free ();
             break;
 
         case DLL_PROCESS_DETACH:
-            if (lpvReserved == NULL) {
-                CAIRO_MUTEX_FINALIZE ();
-            }
+            if (lpvReserved != NULL)
+                break;
+            cairo_win32_finalize ();
             break;
     }
 }
@@ -168,5 +186,3 @@ static const PIMAGE_TLS_CALLBACK _ptr_##func = func;
 #endif /* !_MSC_VER */
 
 DEFINE_TLS_CALLBACK (cairo_win32_tls_callback);
-
-#endif /* CAIRO_MUTEX_IMPL_WIN32 */
