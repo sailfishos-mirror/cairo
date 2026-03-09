@@ -115,6 +115,15 @@ cairo_win32_async_stdcall_free (stdcall_free_func_t func, void *data)
     QueueUserWorkItem (func, data, WT_EXECUTEDEFAULT);
 }
 
+void
+cairo_win32_async_com_release (IUnknown *iface_ptr)
+{
+    if (iface_ptr) {
+        QueueUserWorkItem ((void *) iface_ptr->lpVtbl->Release,
+                           iface_ptr, WT_EXECUTEDEFAULT);
+    }
+}
+
 static void
 cairo_win32_initialize (void)
 {
@@ -125,6 +134,8 @@ cairo_win32_initialize (void)
 static void
 cairo_win32_finalize (void)
 {
+    cairo_win32_dwrite_finalize ();
+
     cairo_win32_thread_data_finalize ();
     CAIRO_MUTEX_FINALIZE ();
 }

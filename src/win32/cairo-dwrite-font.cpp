@@ -2437,3 +2437,9 @@ _cairo_dwrite_scaled_font_create_win32_scaled_font (cairo_scaled_font_t *scaled_
     *new_font = font;
     return CAIRO_INT_STATUS_SUCCESS;
 }
+
+void
+cairo_win32_dwrite_finalize ()
+{
+    DWriteFactory::Finalize();
+}

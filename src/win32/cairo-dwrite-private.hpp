@@ -121,6 +121,24 @@ public:
 	return family;
     }
 
+    static void Finalize()
+    {
+        /* Loader-lock-safe */
+
+        if (_cairo_atomic_init_once_check (&mOnceSystemCollection)) {
+            cairo_win32_async_com_release (mSystemCollection.forget().drop());
+        }
+
+        if (_cairo_atomic_init_once_check (&mOnceFactories)) {
+            cairo_win32_async_com_release (mFactoryInstance.forget().drop());
+            cairo_win32_async_com_release (mFactoryInstance1.forget().drop());
+            cairo_win32_async_com_release (mFactoryInstance2.forget().drop());
+            cairo_win32_async_com_release (mFactoryInstance3.forget().drop());
+            cairo_win32_async_com_release (mFactoryInstance4.forget().drop());
+            cairo_win32_async_com_release (mFactoryInstance8.forget().drop());
+        }
+    }
+
 private:
     static void InitializeFactories()
     {

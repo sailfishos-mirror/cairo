@@ -45,6 +45,7 @@
 #include "cairo-win32.h"
 
 #include <windows.h>
+#include <unknwn.h>
 
 #define WIN32_FONT_LOGICAL_SCALE 32
 
@@ -243,6 +244,9 @@ typedef DWORD (__stdcall *stdcall_free_func_t) (void *);
 void
 cairo_win32_async_stdcall_free (stdcall_free_func_t func, void *data);
 
+void
+cairo_win32_async_com_release (IUnknown *iface_ptr);
+
 typedef struct {
     HDC hdc;
     cairo_bool_t free_hdc;
@@ -276,6 +280,9 @@ _cairo_dwrite_show_glyphs_on_surface (void *surface,
 cairo_int_status_t
 _cairo_dwrite_scaled_font_create_win32_scaled_font (cairo_scaled_font_t *scaled_font,
                                                     cairo_scaled_font_t **new_font);
+
+void
+cairo_win32_dwrite_finalize (void);
 
 #endif /* CAIRO_HAS_DWRITE_FONT */
 
