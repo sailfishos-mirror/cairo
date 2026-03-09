@@ -107,6 +107,16 @@ thread_data_free (cairo_win32_thread_data_t *data)
         cairo_win32_async_stdcall_free (free_func, data->hdc);
     }
 
+#if CAIRO_HAS_DWRITE_FONT
+    /* It's not clear if we can release DWrite objects from DllMain
+     * or in general while holding the loader lock. For one, this
+     * is not allowed for DXGI factories (refer to "DXGI responses
+     * from DLLMain" in MSDN's "DXGI Overview"). Use an asynchronous
+     * release to ensure safety.
+     */
+    cairo_win32_async_com_release ((IUnknown*) data->d2d1_factory);
+#endif
+
 #ifdef USE_EXPLICIT_TLS
     thread_data_allocation_free (data);
 #endif

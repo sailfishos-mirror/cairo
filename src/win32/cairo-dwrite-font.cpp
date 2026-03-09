@@ -71,13 +71,6 @@
  * Since: 1.18
  **/
 
-typedef HRESULT (WINAPI*D2D1CreateFactoryFunc)(
-    D2D1_FACTORY_TYPE factoryType,
-    REFIID iid,
-    CONST D2D1_FACTORY_OPTIONS *pFactoryOptions,
-    void **factory
-);
-
 #define CAIRO_INT_STATUS_SUCCESS (cairo_int_status_t)CAIRO_STATUS_SUCCESS
 
 // Forward declarations
@@ -133,31 +126,41 @@ class D2DFactory
 public:
     static RefPtr<ID2D1Factory> Instance()
     {
-	if (!mFactoryInstance) {
+        /* According to MSDN, using independent, single-threaded D2D1 factories
+         * in each thread is the most scalable solution.
+         */
+        cairo_win32_thread_data_t *thread_data = cairo_win32_thread_data_get ();
+
+        if (!thread_data->d2d1_factory) {
+            typedef HRESULT
+            (WINAPI *pD2D1CreateFactory_t) (D2D1_FACTORY_TYPE factoryType,
+                                            REFIID iid,
+                                            CONST D2D1_FACTORY_OPTIONS *pFactoryOptions,
+                                            void **factory);
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-function-type"
 #endif
+            /* TODO */
             HMODULE d2d1 = _cairo_win32_load_library_from_system32 (L"d2d1.dll");
-	    D2D1CreateFactoryFunc createD2DFactory = (D2D1CreateFactoryFunc)
-                GetProcAddress(d2d1, "D2D1CreateFactory");
+            pD2D1CreateFactory_t pD2D1CreateFactory = (pD2D1CreateFactory_t)
+                GetProcAddress (d2d1, "D2D1CreateFactory");
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
-	    if (createD2DFactory) {
-		D2D1_FACTORY_OPTIONS options;
-		options.debugLevel = D2D1_DEBUG_LEVEL_NONE;
-		createD2DFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED,
-				 __uuidof(ID2D1Factory),
-				 &options,
-				 (void**)&mFactoryInstance);
-	    }
-	}
-	return mFactoryInstance;
-    }
+            /* D2D1 is based on nano-COM (just like DWrite), so there's no need
+             * to ensure an apartment with CoInitializeEx or the implicit MTA.
+             */
+            D2D1_FACTORY_OPTIONS options { D2D1_DEBUG_LEVEL_NONE };
+            HRESULT hr = pD2D1CreateFactory (D2D1_FACTORY_TYPE_SINGLE_THREADED,
+                                             __uuidof (ID2D1Factory),
+                                             &options,
+                                             (void**) &thread_data->d2d1_factory);
+            assert (SUCCEEDED (hr));
+        }
 
-private:
-    static RefPtr<ID2D1Factory> mFactoryInstance;
+        return thread_data->d2d1_factory;
+    }
 };
 
 class WICImagingFactory
@@ -190,8 +193,6 @@ RefPtr<IWICImagingFactory> WICImagingFactory::mFactoryInstance;
 
 cairo_atomic_once_t DWriteFactory::mOnceSystemCollection = CAIRO_ATOMIC_ONCE_INIT;
 RefPtr<IDWriteFontCollection> DWriteFactory::mSystemCollection;
-
-RefPtr<ID2D1Factory> D2DFactory::mFactoryInstance;
 
 static RefPtr<IDWriteRenderingParams>
 _create_rendering_params(IDWriteRenderingParams     *params,

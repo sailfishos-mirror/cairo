@@ -247,9 +247,17 @@ cairo_win32_async_stdcall_free (stdcall_free_func_t func, void *data);
 void
 cairo_win32_async_com_release (IUnknown *iface_ptr);
 
+#if CAIRO_HAS_DWRITE_FONT
+interface ID2D1Factory;
+#endif
+
 typedef struct {
     HDC hdc;
     cairo_bool_t free_hdc;
+
+#if CAIRO_HAS_DWRITE_FONT
+    interface ID2D1Factory *d2d1_factory;
+#endif
 
     cairo_bool_t added_to_list;
 } cairo_win32_thread_data_t;
