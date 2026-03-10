@@ -124,7 +124,8 @@ _cairo_dwrite_error (HRESULT hr, const char *context)
 class D2DFactory
 {
 public:
-    static RefPtr<ID2D1Factory> Instance()
+    static ID2D1Factory *
+    Instance()
     {
         /* According to MSDN, using independent, single-threaded D2D1 factories
          * in each thread is the most scalable solution.
