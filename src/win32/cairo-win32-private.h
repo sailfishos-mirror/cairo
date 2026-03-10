@@ -181,6 +181,9 @@ _cairo_win32_gdi_compositor_get (void);
 cairo_status_t
 _cairo_win32_print_api_error (const char *context, const char *api);
 
+cairo_status_t
+_cairo_win32_api_error_fatal (const char *format, ...);
+
 cairo_bool_t
 _cairo_surface_is_win32 (const cairo_surface_t *surface);
 
@@ -238,6 +241,9 @@ cairo_win32_get_system_text_quality (void);
 
 HMODULE
 _cairo_win32_load_library_from_system32 (const wchar_t *name);
+
+void
+cairo_win32_ensure_mta (void);
 
 typedef DWORD (__stdcall *stdcall_free_func_t) (void *);
 

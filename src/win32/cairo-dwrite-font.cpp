@@ -168,17 +168,35 @@ class WICImagingFactory
 public:
     static RefPtr<IWICImagingFactory> Instance()
     {
-	if (!mFactoryInstance) {
-	    CoInitialize(NULL);
-	    CoCreateInstance(CLSID_WICImagingFactory,
-			     NULL,
-			     CLSCTX_INPROC_SERVER,
-			     IID_PPV_ARGS(&mFactoryInstance));
-	}
-	return mFactoryInstance;
+        HRESULT hr;
+
+        /* WIC is based on true COM, so we need to set this thread
+         * on a COM apartment. Usually one calls CoInitialize and
+         * call it a day, however this is used on threads we don't
+         * own. We can use whatever apartment the user has already
+         * initialized, but if there's no apartment we don't want
+         * to force the thread to a specific apartment type. Turns
+         * out implicit MTA is perfect for this; we have to take
+         * a reference on the MTA however, otherwise it can disappear
+         * at any time in the middle of our operations.
+         *
+         * Note: WICImagingFactory has threading model 'both', so
+         * the object will be accessed directly (no marshaling)
+         * regardless of the apartment type.
+         */
+        cairo_win32_ensure_mta ();
+
+        IWICImagingFactory *wic_factory;
+        hr = CoCreateInstance (CLSID_WICImagingFactory,
+                               NULL,
+                               CLSCTX_INPROC_SERVER,
+                               IID_PPV_ARGS (&wic_factory));
+        if (FAILED (hr)) {
+            assert (0 && "CoCreateInstance (CLSID_WICImagingFactory) failed");
+        }
+
+        return wic_factory;
     }
-private:
-    static RefPtr<IWICImagingFactory> mFactoryInstance;
 };
 
 cairo_atomic_once_t DWriteFactory::mOnceFactories = CAIRO_ATOMIC_ONCE_INIT;
@@ -188,9 +206,6 @@ RefPtr<IDWriteFactory2> DWriteFactory::mFactoryInstance2;
 RefPtr<IDWriteFactory3> DWriteFactory::mFactoryInstance3;
 RefPtr<IDWriteFactory4> DWriteFactory::mFactoryInstance4;
 RefPtr<IDWriteFactory8> DWriteFactory::mFactoryInstance8;
-
-RefPtr<IWICImagingFactory> WICImagingFactory::mFactoryInstance;
-
 cairo_atomic_once_t DWriteFactory::mOnceSystemCollection = CAIRO_ATOMIC_ONCE_INIT;
 RefPtr<IDWriteFontCollection> DWriteFactory::mSystemCollection;
 
