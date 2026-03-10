@@ -54,43 +54,50 @@ typedef struct _cairo_dwrite_scaled_font cairo_dwrite_scaled_font_t;
 class DWriteFactory
 {
 public:
-    static RefPtr<IDWriteFactory> Instance()
+    static IDWriteFactory *
+    Instance()
     {
         InitializeFactories();
         return mFactoryInstance;
     }
 
-    static RefPtr<IDWriteFactory1> Instance1()
+    static IDWriteFactory1 *
+    Instance1()
     {
         InitializeFactories();
         return mFactoryInstance1;
     }
 
-    static RefPtr<IDWriteFactory2> Instance2()
+    static IDWriteFactory2 *
+    Instance2()
     {
         InitializeFactories();
         return mFactoryInstance2;
     }
 
-    static RefPtr<IDWriteFactory3> Instance3()
+    static IDWriteFactory3 *
+    Instance3()
     {
         InitializeFactories();
         return mFactoryInstance3;
     }
 
-    static RefPtr<IDWriteFactory4> Instance4()
+    static IDWriteFactory4 *
+    Instance4()
     {
         InitializeFactories();
         return mFactoryInstance4;
     }
 
-    static RefPtr<IDWriteFactory8> Instance8()
+    static IDWriteFactory8 *
+    Instance8()
     {
         InitializeFactories();
         return mFactoryInstance8;
     }
 
-    static RefPtr<IDWriteFontCollection> SystemCollection()
+    static IDWriteFontCollection *
+    SystemCollection()
     {
         /* The system font collection obtained from the shared factory
          * is a singleton object. This means that we can cache it
@@ -106,7 +113,8 @@ public:
         return mSystemCollection;
     }
 
-    static RefPtr<IDWriteFontFamily> FindSystemFontFamily(const WCHAR *aFamilyName)
+    static RefPtr<IDWriteFontFamily>
+    FindSystemFontFamily(const WCHAR *aFamilyName)
     {
 	UINT32 idx;
 	BOOL found;
@@ -121,26 +129,28 @@ public:
 	return family;
     }
 
-    static void Finalize()
+    static void
+    Finalize()
     {
         /* Loader-lock-safe */
 
         if (_cairo_atomic_init_once_check (&mOnceSystemCollection)) {
-            cairo_win32_async_com_release (mSystemCollection.forget().drop());
+            cairo_win32_async_com_release (mSystemCollection);
         }
 
         if (_cairo_atomic_init_once_check (&mOnceFactories)) {
-            cairo_win32_async_com_release (mFactoryInstance.forget().drop());
-            cairo_win32_async_com_release (mFactoryInstance1.forget().drop());
-            cairo_win32_async_com_release (mFactoryInstance2.forget().drop());
-            cairo_win32_async_com_release (mFactoryInstance3.forget().drop());
-            cairo_win32_async_com_release (mFactoryInstance4.forget().drop());
-            cairo_win32_async_com_release (mFactoryInstance8.forget().drop());
+            cairo_win32_async_com_release (mFactoryInstance);
+            cairo_win32_async_com_release (mFactoryInstance1);
+            cairo_win32_async_com_release (mFactoryInstance2);
+            cairo_win32_async_com_release (mFactoryInstance3);
+            cairo_win32_async_com_release (mFactoryInstance4);
+            cairo_win32_async_com_release (mFactoryInstance8);
         }
     }
 
 private:
-    static void InitializeFactories()
+    static void
+    InitializeFactories()
     {
         /* The shared IDWriteFactory is a singleton object (every call to
          * DWriteCreateFactory returns the same object) and thus is safe
@@ -186,15 +196,15 @@ private:
 
 private:
     static cairo_atomic_once_t mOnceFactories;
-    static RefPtr<IDWriteFactory> mFactoryInstance;
-    static RefPtr<IDWriteFactory1> mFactoryInstance1;
-    static RefPtr<IDWriteFactory2> mFactoryInstance2;
-    static RefPtr<IDWriteFactory3> mFactoryInstance3;
-    static RefPtr<IDWriteFactory4> mFactoryInstance4;
-    static RefPtr<IDWriteFactory8> mFactoryInstance8;
+    static IDWriteFactory *mFactoryInstance;
+    static IDWriteFactory1 *mFactoryInstance1;
+    static IDWriteFactory2 *mFactoryInstance2;
+    static IDWriteFactory3 *mFactoryInstance3;
+    static IDWriteFactory4 *mFactoryInstance4;
+    static IDWriteFactory8 *mFactoryInstance8;
 
     static cairo_atomic_once_t mOnceSystemCollection;
-    static RefPtr<IDWriteFontCollection> mSystemCollection;
+    static IDWriteFontCollection *mSystemCollection;
 };
 
 class AutoDWriteGlyphRun : public DWRITE_GLYPH_RUN

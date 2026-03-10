@@ -200,14 +200,14 @@ public:
 };
 
 cairo_atomic_once_t DWriteFactory::mOnceFactories = CAIRO_ATOMIC_ONCE_INIT;
-RefPtr<IDWriteFactory> DWriteFactory::mFactoryInstance;
-RefPtr<IDWriteFactory1> DWriteFactory::mFactoryInstance1;
-RefPtr<IDWriteFactory2> DWriteFactory::mFactoryInstance2;
-RefPtr<IDWriteFactory3> DWriteFactory::mFactoryInstance3;
-RefPtr<IDWriteFactory4> DWriteFactory::mFactoryInstance4;
-RefPtr<IDWriteFactory8> DWriteFactory::mFactoryInstance8;
+IDWriteFactory *DWriteFactory::mFactoryInstance;
+IDWriteFactory1 *DWriteFactory::mFactoryInstance1;
+IDWriteFactory2 *DWriteFactory::mFactoryInstance2;
+IDWriteFactory3 *DWriteFactory::mFactoryInstance3;
+IDWriteFactory4 *DWriteFactory::mFactoryInstance4;
+IDWriteFactory8 *DWriteFactory::mFactoryInstance8;
 cairo_atomic_once_t DWriteFactory::mOnceSystemCollection = CAIRO_ATOMIC_ONCE_INIT;
-RefPtr<IDWriteFontCollection> DWriteFactory::mSystemCollection;
+IDWriteFontCollection *DWriteFactory::mSystemCollection;
 
 static RefPtr<IDWriteRenderingParams>
 _create_rendering_params(IDWriteRenderingParams     *params,
@@ -1148,7 +1148,7 @@ _cairo_dwrite_scaled_font_init_glyph_color_surface(cairo_dwrite_scaled_font_t *s
     if (scaled_font->base.options.palette_index < palette_count)
 	palette_index = scaled_font->base.options.palette_index;
 
-    if (DWriteFactory::Instance8().get()) {
+    if (DWriteFactory::Instance8()) {
         hr = DWriteFactory::Instance8()->TranslateColorGlyphRun(
             origin,
             &run,
@@ -1161,7 +1161,7 @@ _cairo_dwrite_scaled_font_init_glyph_color_surface(cairo_dwrite_scaled_font_t *s
             palette_index,
             &run_enumerator);
     }
-    else if (DWriteFactory::Instance4().get()) {
+    else if (DWriteFactory::Instance4()) {
         hr = DWriteFactory::Instance4()->TranslateColorGlyphRun(
             origin,
             &run,
