@@ -48,7 +48,6 @@
 
 #ifdef _MSC_VER
 #define _USE_MATH_DEFINES /* for M_LN2, M_PI and M_SQRT2 on win32 */
-#define snprintf _snprintf
 #endif
 
 #include <math.h>

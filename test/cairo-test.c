@@ -70,7 +70,6 @@
 #include <io.h>
 #define F_OK 0
 #define HAVE_MKDIR 1
-#define mkdir _mkdir
 #endif
 
 #ifndef FALSE

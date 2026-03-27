@@ -100,7 +100,9 @@ if cc.get_id() == 'msvc'
                         # Turn "<function> undefined, assuming extern returning int" to an error
                         '/we4013',
                         language : ['c', 'cpp'])
-  add_project_arguments('-D_CRT_SECURE_NO_WARNINGS', language : ['c', 'cpp'])
+  add_project_arguments(['-D_CRT_SECURE_NO_WARNINGS',
+                         '-D_CRT_NONSTDC_NO_WARNINGS',
+                        ], language : ['c', 'cpp'])
 endif
 
 add_project_arguments('-D_GNU_SOURCE', language: ['c', 'cpp'])
