@@ -90,7 +90,7 @@ if cc.get_id() != 'msvc'
   conf.set('WARN_UNUSED_RESULT', warn_unused_result)
 endif
 
-if cc.get_id() == 'msvc'
+if cc.get_argument_syntax() == 'msvc'
   # Basic usage in the cairo type system that causes spammy and useless warnings
   add_project_arguments('/wd4244', '/wd4146',
                         # Don't warn about double -> float truncation
