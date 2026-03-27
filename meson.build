@@ -102,6 +102,7 @@ if cc.get_id() == 'msvc'
                         language : ['c', 'cpp'])
   add_project_arguments(['-D_CRT_SECURE_NO_WARNINGS',
                          '-D_CRT_NONSTDC_NO_WARNINGS',
+                         '-D_USE_MATH_DEFINES',
                         ], language : ['c', 'cpp'])
 endif
 
