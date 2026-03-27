@@ -97,6 +97,8 @@ if cc.get_id() == 'msvc'
                         '/wd4305',
                         # Don't warn about _cairo_status -> _cairo_int_status conversion
                         '/wd5286',
+                        # Turn "<function> undefined, assuming extern returning int" to an error
+                        '/we4013',
                         language : ['c', 'cpp'])
   add_project_arguments('-D_CRT_SECURE_NO_WARNINGS', language : ['c', 'cpp'])
 endif
