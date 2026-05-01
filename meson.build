@@ -148,8 +148,12 @@ check_headers = [
 check_types = [
   ['uint64_t', {'headers': ['stdint.h']}],
   ['uint128_t', {'headers': ['stdint.h']}],
-  ['__uint128_t']
 ]
+
+# https://github.com/llvm/llvm-project/issues/25679
+if cc.get_id() != 'clang-cl'
+  check_types += [ ['__uint128_t'] ]
+endif
 
 check_funcs = [
   'alarm',
