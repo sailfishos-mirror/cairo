@@ -154,20 +154,11 @@
 #endif
 
 #if (defined(__WIN32__) && !defined(__WINE__)) || defined(_MSC_VER)
-#define access _access
 #ifndef R_OK
 #define R_OK 4
 #endif
-#define fdopen _fdopen
-#define hypot _hypot
 #define pclose _pclose
 #define popen _popen
-#define strdup _strdup
-#define unlink _unlink
-#if defined (_MSC_VER) && _MSC_VER < 1900
-  #define vsnprintf _vsnprintf
-  #define snprintf _snprintf
-#endif
 #endif
 
 #if defined(_MSC_VER) && defined(_M_IX86)
