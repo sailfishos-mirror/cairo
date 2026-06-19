@@ -45,6 +45,7 @@
 #include "cairoint.h"
 
 #include "cairo-array-private.h"
+#include "cairo-compiler-private.h"
 #include "cairo-error-private.h"
 
 #if CAIRO_HAS_FONT_SUBSET
@@ -1037,6 +1038,7 @@ cairo_cff_font_read_cid_fontdict (cairo_cff_font_t *font, unsigned char *ptr)
     cairo_int_status_t status;
     unsigned char buf[100];
     unsigned char *end_buf;
+    size_t end_offset;
 
     cff_index_init (&index);
     status = cff_index_read (&index, &ptr, font->data_end);
@@ -1108,7 +1110,15 @@ cairo_cff_font_read_cid_fontdict (cairo_cff_font_t *font, unsigned char *ptr)
             goto fail;
         }
         decode_integer (operand, &offset);
-        if (unlikely (offset < 0 || (unsigned long)(size + offset) > font->data_length)) {
+        if (unlikely (offset < 0)) {
+            status = CAIRO_INT_STATUS_UNSUPPORTED;
+            goto fail;
+        }
+        if (unlikely (_cairo_add_size_t_overflow (size, offset, &end_offset))) {
+            status = CAIRO_INT_STATUS_UNSUPPORTED;
+            goto fail;
+        }
+        if (unlikely (end_offset > font->data_length)) {
             status = CAIRO_INT_STATUS_UNSUPPORTED;
             goto fail;
         }
