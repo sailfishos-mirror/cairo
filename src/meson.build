@@ -175,6 +175,7 @@ cairo_feature_sources = {
     'win32/cairo-win32-surface.c',
     'win32/cairo-win32-display-surface.c',
     'win32/cairo-win32-printing-surface.c',
+    'win32/cairo-win32-thread-data.c',
   ],
   'cairo-win32-font': [
     'win32/cairo-win32-font.c',

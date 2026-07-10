@@ -514,6 +514,19 @@ _cairo_atomic_init_once_leave(cairo_atomic_once_t *once)
     }
 }
 
+static cairo_always_inline cairo_bool_t
+_cairo_atomic_init_once_check(cairo_atomic_once_t *once)
+{
+    BOOL pending;
+
+    if (InitOnceBeginInitialize (once, INIT_ONCE_CHECK_ONLY, &pending, NULL)) {
+        assert (!pending);
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
 #else
 
 typedef cairo_atomic_int_t cairo_atomic_once_t;
@@ -545,6 +558,19 @@ _cairo_atomic_init_once_leave(cairo_atomic_once_t *once)
 					    CAIRO_ATOMIC_ONCE_INITIALIZING,
 					    CAIRO_ATOMIC_ONCE_INITIALIZED)))
 	assert (0 && "incorrect use of _cairo_atomic_init_once API (once != CAIRO_ATOMIC_ONCE_INITIALIZING)");
+}
+
+static cairo_always_inline cairo_bool_t
+_cairo_atomic_init_once_check(cairo_atomic_once_t *once)
+{
+    int val = _cairo_atomic_int_get(once);
+
+    if (unlikely(val == CAIRO_ATOMIC_ONCE_INITIALIZING))
+       assert (0 && "incorrect use of _cairo_atomic_init_check API (once == CAIRO_ATOMIC_ONCE_INITIALIZING)");
+
+    assert (val == CAIRO_ATOMIC_ONCE_UNINITIALIZED || val == CAIRO_ATOMIC_ONCE_INITIALIZED);
+
+    return val == CAIRO_ATOMIC_ONCE_INITIALIZED;
 }
 
 #endif /* !_WIN32 */
