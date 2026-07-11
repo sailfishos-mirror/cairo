@@ -249,6 +249,7 @@ libcairo = library('cairo', cairo_sources,
   gnu_symbol_visibility: 'hidden',
   soversion: cairo_version_sonum,
   version: cairo_libversion,
+  darwin_versions: cairo_darwin_versions,
   install: true,
   include_directories: incbase,
 )

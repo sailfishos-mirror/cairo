@@ -35,6 +35,11 @@ else
   cairo_libversion = '@0@.@1@.@2@'.format(cairo_version_sonum, cairo_version, cairo_version_micro)
 endif
 
+# Use a stable compatibility version for Darwin dylibs so cairo is suitable for distribution as a
+# system library.  The compatibility version is pinned at 1.0 while the current version tracks the
+# release, keeping clients from needing to relink on every release.
+cairo_darwin_versions = ['1.0', '@0@.@1@.@2@'.format(cairo_version_major, cairo_version_minor, cairo_version_micro)]
+
 conf = configuration_data()
 
 cc = meson.get_compiler('c')
