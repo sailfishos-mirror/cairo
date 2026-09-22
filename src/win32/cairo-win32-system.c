@@ -52,6 +52,12 @@
 
 #include <stdbool.h>
 
+#if _WIN32_WINNT < _WIN32_WINNT_WIN8
+
+DECLARE_HANDLE(CO_MTA_USAGE_COOKIE);
+
+#endif
+
 typedef HRESULT (__stdcall *pCoIncrementMTAUsage_t) (CO_MTA_USAGE_COOKIE*);
 typedef HRESULT (__stdcall *pCoDecrementMTAUsage_t) (CO_MTA_USAGE_COOKIE);
 
@@ -248,7 +254,9 @@ cairo_win32_initialize (void)
 static void
 cairo_win32_finalize (void)
 {
+#if CAIRO_HAS_DWRITE_FONT
     cairo_win32_dwrite_finalize ();
+#endif
     cairo_win32_thread_data_finalize ();
     cairo_win32_mta_finalize ();
     CAIRO_MUTEX_FINALIZE ();
